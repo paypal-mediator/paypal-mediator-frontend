@@ -199,6 +199,14 @@ function App() {
       if (event.key !== 'Escape' || event.defaultPrevented || settingsOpen || signedOut || accountMenuOpen) return;
       if (event.target.closest?.('input, textarea, select, [contenteditable="true"]')) return;
       event.preventDefault();
+      const parent = { details: 'purchases', report: 'details', mediation: 'disputes', resolution: 'mediation', outcome: 'disputes' }[page];
+      if (parent) {
+        sidebarNavigationEnabled.current = false;
+        setSidebarKeyboardMode(false);
+        setTableKeyboardMode(false);
+        go(parent);
+        return;
+      }
       sidebarNavigationEnabled.current = true;
       setSidebarKeyboardMode(true);
       setTableKeyboardMode(false);
