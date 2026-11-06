@@ -30,9 +30,9 @@ export default function PurchaseSummary({ order }) {
       <Row label="Status"><span className="badge">{dispute.status}</span></Row>
       {dispute.responseDeadline && <Row label="Respond by"><span className="response-deadline">{dispute.responseDeadline}</span></Row>}
     </dl> : <p className="summary-no-dispute">No dispute on this transaction.</p>}</div>
-    <details className="summary-details"><summary>Amount breakdown</summary><dl>
+    <section className="summary-section"><h3>Amount breakdown</h3><dl>
       <Row label="Items">{money(breakdown?.subtotal)}</Row><Row label="Shipping">{money(breakdown?.shipping)}</Row><Row label="Tax">{money(breakdown?.tax)}</Row><Row label="Order total">{money(order.price)}</Row><Row label="Refunded">{money(breakdown?.refunded)}</Row>
-    </dl></details>
-    <details className="summary-details"><summary>Item details <span>{items.length}</span></summary>{items.length ? items.map(item => <div className="summary-item" key={item.sku}><strong>{item.name}</strong><dl><Row label="SKU">{item.sku}</Row><Row label="Variant">{item.variant}</Row><Row label="Quantity">{item.quantity}</Row><Row label="Unit price">{money(item.unitPrice)}</Row></dl></div>) : <p>No item details available.</p>}</details>
+    </dl></section>
+    <section className="summary-section"><h3>Item details <span className="muted">{items.length}</span></h3>{items.length ? items.map(item => <div className="summary-item" key={item.sku}><strong>{item.name}</strong><dl><Row label="SKU">{item.sku}</Row><Row label="Variant">{item.variant}</Row><Row label="Quantity">{item.quantity}</Row><Row label="Unit price">{money(item.unitPrice)}</Row></dl></div>) : <p>No item details available.</p>}</section>
   </section>;
 }
