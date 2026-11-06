@@ -76,3 +76,5 @@
 .transactions-table tbody tr:focus{outline:none;background:#202020}.transaction-filters button:focus-visible{outline:none}
 .table-pointer-mode .transactions-table tbody tr:focus{background:transparent}.table-pointer-mode .transactions-table tbody tr:hover{background:#161616}.table-keyboard-mode .transactions-table tbody tr:hover{background:transparent}.table-keyboard-mode .transactions-table tbody tr:focus{background:#161616}
 .sidebar.sidebar-keyboard-mode .nav-item:not(.active):hover{background:transparent;color:#929292}
+.product-thumbnail{display:inline-grid;place-items:center;flex-shrink:0;width:40px;height:40px;overflow:hidden;border-radius:10px;background:#222;border:1px solid #343434;color:#999}.product-thumbnail img{display:block;width:100%;height:100%;object-fit:cover}.product-thumbnail svg{width:21px;height:21px}.featured .product-thumbnail{width:52px;height:52px;border-radius:12px}.featured .product-thumbnail svg{width:26px;height:26px}.additional-items{color:#999}
+.workspace{padding-top:16px}
