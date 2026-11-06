@@ -75,3 +75,4 @@
 .transaction-toolbar .transaction-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}.transaction-toolbar .transaction-filters button{width:100%;white-space:nowrap}
 .transactions-table tbody tr:focus{outline:none;background:#202020}.transaction-filters button:focus-visible{outline:none}
 .table-pointer-mode .transactions-table tbody tr:focus{background:transparent}.table-pointer-mode .transactions-table tbody tr:hover{background:#161616}.table-keyboard-mode .transactions-table tbody tr:hover{background:transparent}.table-keyboard-mode .transactions-table tbody tr:focus{background:#161616}
+.sidebar.sidebar-keyboard-mode .nav-item:not(.active):hover{background:transparent;color:#929292}
