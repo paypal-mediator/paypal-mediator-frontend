@@ -40,3 +40,5 @@ Use `GET /transactions` for server pagination (`page`, `pageSize`) and exact `pa
 - Settings: Up/Down switches categories; Escape closes the dialog.
 
 Tests cover fixture relationships, exact currency formatting without floating-point conversion, and authenticated API request/error behavior. They do not verify live services or browser rendering.
+
+Evidence history uses explicit revision snapshots from `evidenceSnapshots` for the frontend: selecting a revision updates the category cards, historical views are read-only, and closing history returns to the current version. The current backend exposes evidence item versions but does not expose complete dossier snapshots per revision. Historical snapshot loading/reconstruction needs a backend contract before connecting this view to live data. No restore-to-old-version write is implemented.

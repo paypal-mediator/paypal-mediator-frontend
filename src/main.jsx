@@ -1,7 +1,6 @@
-import EvidenceUpload from './EvidenceUpload';
+import EvidenceScreen from './EvidenceScreen';
 import RestoredDisputes from './RestoredDisputes';
 import DisputeWorkspace from './DisputeWorkspace';
-import EvidenceHistory from './EvidenceHistory';
 import Badge from './Badge';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -10,7 +9,7 @@ import ProductThumbnail from './ProductThumbnail';
 import PurchaseSummary from './PurchaseSummary';
 import TransactionFilters from './TransactionFilters';
 import Settings from './Settings';
-import { transactions, dossiers, merchant, integration } from './data/fixtures';
+import { transactions, evidenceSnapshots, merchant, integration } from './data/fixtures';
 import { date, label, money, transactionName, transactionSubtitle } from './lib/format';
 import './styles.css';
 const nav = [['overview', '◫', 'Overview'], ['transactions', '▦', 'Transactions'], ['disputes', '◎', 'Disputes'], ['activity', '◷', 'Agent Activity']];
@@ -33,7 +32,6 @@ function App() {
   const accountRef = useRef(null);
   const dialogRef = useRef(null);
   const transaction = transactions.find(item => item.id === selected);
-  const dossier = dossiers[selected];
   const go = destination => { setPage(destination); window.scrollTo({ top: 0 }); };
   const open = item => { setSelected(item.id); go('details'); };
   const filtered = transactions.filter(item => (filter === 'All transactions' || item.readiness.status === (filter === 'Incomplete' ? 'INCOMPLETE' : 'NEEDS_REVIEW')) && (!query.trim() || item.paypalCaptureId === query.trim()));
@@ -109,16 +107,9 @@ function App() {
   if (signedOut) return <div className="signed-out"><Card><h1>You’re signed out.</h1><button className="button primary" onClick={() => { setSignedOut(false); go('overview'); }}>Return</button></Card></div>;
   return <div className="app-shell"><aside className={`sidebar ${sidebarKeyboard ? 'sidebar-keyboard-mode' : ''}`} onPointerMove={event => { if (event.movementX || event.movementY) setSidebarKeyboard(false); }} onPointerDown={() => setSidebarKeyboard(false)}><nav aria-label="Main navigation">{nav.map(([id, icon, name], index) => <button data-sidebar-tab key={id} ref={element => { sidebarRefs.current[index] = element; }} className={`nav-item ${rootPage(page) === id ? 'active' : ''}`} aria-current={rootPage(page) === id ? 'page' : undefined} onClick={() => go(id)}><span aria-hidden="true">{icon}</span>{name}</button>)}</nav></aside><main><header className="topbar"><nav className="breadcrumb" aria-label="Breadcrumb"><ol>{crumbs.map((crumb, index) => <li key={index}>{index > 0 && <span className="breadcrumb-separator">/</span>}{index === crumbs.length - 1 ? <span className="breadcrumb-current" aria-current="page">{crumb.name}</span> : <a href={`#${crumb.target}`} onClick={event => { event.preventDefault(); go(crumb.target); }}>{crumb.name}</a>}</li>)}</ol></nav><div className="topbar-right"><div className="account-dropdown" ref={accountRef}><button className="account-profile" ref={profileRef} aria-label="Account menu" aria-expanded={accountOpen} onClick={() => setAccountOpen(!accountOpen)}><ProfileAvatar small /></button>{accountOpen && <div className="account-menu"><button onClick={() => { setAccountOpen(false); setSettingsOpen(true); }}><span aria-hidden="true">⚙</span>Settings</button><button onClick={() => { setAccountOpen(false); setSignedOut(true); }}><span aria-hidden="true">↪</span>Log out</button></div>}</div></div></header><div className="workspace">
     {page === 'overview' && <><div className="stats-grid">{[['Transactions', transactions.length], ['Ready', transactions.filter(item => item.readiness.status === 'READY').length], ['Incomplete', transactions.filter(item => item.readiness.status === 'INCOMPLETE').length], ['Needs review', transactions.filter(item => item.readiness.status === 'NEEDS_REVIEW').length]].map(([name, value]) => <Card key={name}><div className="stat-label">{name}</div><div className="stat-value">{value}</div></Card>)}</div><div className="two-column"><Card><div className="card-heading"><h2>Transactions needing attention</h2></div>{transactions.filter(item => item.readiness.status !== 'READY').map(item => <button className="settings-purchase" key={item.id} onClick={() => open(item)}><span><strong>{transactionName(item)}</strong><small>{transactionSubtitle(item)}</small></span><Badge>{label(item.readiness.status)}</Badge></button>)}</Card><Card><div className="card-heading"><h2>Merchant</h2></div><dl><div><dt>Name</dt><dd>{merchant.displayName}</dd></div><div><dt>Role</dt><dd>{merchant.role}</dd></div><div><dt>PayPal connection</dt><dd>{label(integration.connectionStatus)}</dd></div><div><dt>Approval required</dt><dd>Yes</dd></div></dl><div className="card-bottom"><button className="button secondary" onClick={() => setSettingsOpen(true)}>Settings</button></div></Card></div></>}
-    {page === 'transactions' && <><div className="filters transaction-toolbar"><TransactionFilters value={filter} onChange={setFilter} /><div className="search-field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input type="text" className="search" ref={searchRef} aria-label="Search by exact capture ID" aria-keyshortcuts="Meta+k Control+k" placeholder="Search capture ID" value={query} onChange={event => setQuery(event.target.value)} /><kbd className="search-shortcut">⌘K</kbd></div></div>{table()}</>}
+    {page === 'transactions' && <><div className="filters transaction-toolbar"><TransactionFilters value={filter} onChange={setFilter} /><div className="search-field" onClick={() => searchRef.current?.focus()}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input type="text" className="search" ref={searchRef} aria-label="Search by exact capture ID" aria-keyshortcuts="Meta+k Control+k" placeholder="Search capture ID" value={query} onChange={event => setQuery(event.target.value)} /><kbd className="search-shortcut">⌘K</kbd></div></div>{table()}</>}
     {page === 'details' && <div className="two-column detail-grid"><PurchaseSummary order={transaction} />{readiness()}</div>}
-    {page === 'evidence' && <><div className="evidence-toolbar"><div className="case-bar"><strong>{transaction.paypalCaptureId}</strong></div><EvidenceHistory key={dossier.id} dossier={dossier} /></div><div className="evidence-records">{transaction.readiness.checks.map(check => {
-      const records = dossier.items.filter(item => check.evidenceIds.includes(item.id));
-      const done = check.status === 'PRESENT' && records.length > 0 && records.every(item => item.integrity === 'VALID');
-      return <Card key={check.code}><div className="card-heading"><h2>{label(check.code)}</h2><Badge>{done ? 'Done' : 'Needs attention'}</Badge></div>
-        {records.length ? records.map(item => <dl key={item.id}><div><dt>Source</dt><dd>{item.sourceKind}</dd></div><div><dt>System</dt><dd>{item.sourceSystem}</dd></div><div><dt>Retrieved</dt><dd>{date(item.retrievedAt)}</dd></div><div><dt>Integrity</dt><dd>{label(item.integrity)}</dd></div></dl>) : <p className="evidence-missing">{check.status === 'CONFLICT' ? 'Conflicting records require review.' : 'Additional evidence needed.'}</p>}
-        {!done && <EvidenceUpload key={`${transaction.id}-${check.code}`} category={label(check.code)} />}
-      </Card>;
-    })}</div></>}
+    {page === 'evidence' && <EvidenceScreen key={transaction.id} transaction={transaction} snapshots={evidenceSnapshots[transaction.id]} />}
     {page === 'disputes' && <RestoredDisputes transaction={transactions[0]} />}
     {page === 'activity' && <DisputeWorkspace page={page} transaction={transactions[0]} onTransaction={() => open(transactions[0])} onEvidence={() => { setSelected(transactions[0].id); go('evidence'); }} />}
   </div></main><dialog className="settings-dialog" ref={dialogRef} tabIndex={-1} aria-label="Settings" onCancel={() => setSettingsOpen(false)} onClose={() => setSettingsOpen(false)} onClick={event => { if (event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) setSettingsOpen(false); } }}><button className="settings-close" aria-label="Close settings" onClick={() => setSettingsOpen(false)}>×</button><Settings merchant={merchant} integration={integration} isOpen={settingsOpen} /></dialog></div>;

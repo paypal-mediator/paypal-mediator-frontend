@@ -26,3 +26,14 @@ export const dossiers = Object.fromEntries(transactions.map(transaction => [tran
     content: check.code === 'PAYMENT_RECORD' ? { paypalCaptureId: transaction.paypalCaptureId, amount: transaction.amount } : check.code === 'ORDER_RECORD' ? transaction.order : { paypalCaptureId: transaction.paypalCaptureId, merchantOrderReference: transaction.merchantOrderReference, carrier: 'DEMO carrier', trackingNumber: 'DEMO-TRACK-1042', status: check.code === 'TRACKING' ? 'IN_TRANSIT' : 'DELIVERED', ...(check.code === 'TRACKING' ? { shippedAt: '2026-11-05T13:00:00Z' } : { deliveredAt: '2026-11-06T10:00:00Z' }) },
   })),
 }]));
+
+// Explicit UI history fixtures. The API exposes item versions, not revision snapshots yet.
+export const evidenceSnapshots = Object.fromEntries(transactions.map(transaction => {
+  const dossier = dossiers[transaction.id];
+  const payment = dossier.items.filter(item => item.type === 'PAYMENT_RECORD');
+  const initialChecks = transaction.readiness.checks.map(check => ({ ...check, status: check.code === 'PAYMENT_RECORD' ? 'PRESENT' : 'MISSING', evidenceIds: check.code === 'PAYMENT_RECORD' ? payment.map(item => item.id) : [] }));
+  return [transaction.id, [
+    { revision: 2, createdAt: '2026-11-06T10:00:00Z', summary: 'Order and supporting records collected', checks: transaction.readiness.checks, items: dossier.items },
+    { revision: 1, createdAt: transaction.capturedAt, summary: 'Payment record collected', checks: initialChecks, items: payment },
+  ]];
+}));
