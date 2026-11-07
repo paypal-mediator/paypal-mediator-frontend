@@ -37,3 +37,10 @@ export const evidenceSnapshots = Object.fromEntries(transactions.map(transaction
     { revision: 1, createdAt: transaction.capturedAt, summary: 'Payment record collected', checks: initialChecks, items: payment },
   ]];
 }));
+
+export const account = { id: 'demo-account-001', displayName: 'Alex Morgan', email: 'alex@example.com', phone: '' };
+
+export const merchants = [merchant, {
+  id: '00000000-0000-4000-8000-000000000002', displayName: 'Studio Collective', role: 'ADMIN',
+  policy: { allowInvestigations: false, allowSubmissions: false, requireMerchantApproval: true },
+}];
