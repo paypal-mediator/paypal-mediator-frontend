@@ -13,3 +13,5 @@ export function transactionSubtitle(transaction) {
   const count = transaction.order?.items.reduce((total, item) => total + item.quantity, 0);
   return count ? `${reference} · ${count} ${count === 1 ? 'item' : 'items'}` : reference;
 }
+
+export const disputeReference = transaction => `DIS-${transaction.paypalCaptureId.replace(/\D/g, '')}`;

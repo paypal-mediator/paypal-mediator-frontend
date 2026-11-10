@@ -1,3 +1,4 @@
+import Icon from './Icon';
 import React, { useEffect, useId, useRef, useState } from 'react';
 
 export default function Combobox({ label, value, onChange, options }) {
@@ -55,8 +56,8 @@ export default function Combobox({ label, value, onChange, options }) {
   };
   return <div className="combobox" ref={rootRef} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
     <button type="button" ref={triggerRef} className="combobox-trigger" role="combobox" aria-label={label} aria-haspopup="listbox" aria-expanded={open} aria-controls={`${id}-listbox`} aria-activedescendant={open ? `${id}-option-${active}` : undefined} onKeyDown={onKeyDown} onClick={() => { setActive(selected); setOpen(!open); }}>
-      <span>{value}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={open ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} /></svg>
+      <span>{value}</span><Icon name={open ? 'ChevronUp' : 'ChevronDown'} />
     </button>
-    {open && <div className="combobox-options" role="listbox" id={`${id}-listbox`} aria-label={label}>{options.map((option, index) => <div key={option} id={`${id}-option-${index}`} role="option" aria-selected={value === option} className={`combobox-option ${active === index ? 'highlighted' : ''}`} onPointerMove={() => setActive(index)} onMouseDown={event => event.preventDefault()} onClick={event => { event.preventDefault(); choose(index); }}><span>{option}</span>{value === option && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>}</div>)}</div>}
+    {open && <div className="combobox-options" role="listbox" id={`${id}-listbox`} aria-label={label}>{options.map((option, index) => <div key={option} id={`${id}-option-${index}`} role="option" aria-selected={value === option} className={`combobox-option ${active === index ? 'highlighted' : ''}`} onPointerMove={() => setActive(index)} onMouseDown={event => event.preventDefault()} onClick={event => { event.preventDefault(); choose(index); }}><span>{option}</span>{value === option && <Icon name="Check" />}</div>)}</div>}
   </div>;
 }

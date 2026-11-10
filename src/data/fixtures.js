@@ -44,3 +44,11 @@ export const merchants = [merchant, {
   id: '00000000-0000-4000-8000-000000000002', displayName: 'Studio Collective', role: 'ADMIN',
   policy: { allowInvestigations: false, allowSubmissions: false, requireMerchantApproval: true },
 }];
+
+// Inbox examples for the local workspace preview.
+export const notifications = [
+  { id: 'notice-dispute-1042', merchantId: merchant.id, title: 'A dispute needs your response', detail: 'Review the case and prepare a response for Studio headphones.', createdAt: '2026-11-10T10:00:00Z', icon: 'MessageSquareWarning', page: 'disputes' },
+  { id: 'notice-evidence-1041', merchantId: merchant.id, title: 'Evidence needs attention', detail: 'Mechanical keyboard is missing supporting documents.', createdAt: '2026-11-10T09:30:00Z', icon: 'FileText', page: 'evidence', transactionId: transactions[1].id },
+  { id: 'notice-agent-1042', merchantId: merchant.id, title: 'Your agent has an update', detail: 'Payment records are available for review in the evidence dossier.', createdAt: '2026-11-10T08:45:00Z', icon: 'Star', page: 'activity' },
+  { id: 'notice-studio-welcome', merchantId: merchants[1].id, title: 'Your team workspace is ready', detail: 'Studio Collective is ready for your team to get started.', createdAt: '2026-11-09T16:00:00Z', icon: 'Users', page: 'overview' },
+];

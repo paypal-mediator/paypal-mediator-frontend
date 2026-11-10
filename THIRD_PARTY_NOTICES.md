@@ -1,6 +1,8 @@
-# Lucide User Round icon
+# Lucide icons (lucide-react)
 
-Source: https://github.com/lucide-icons/lucide/blob/main/icons/user-round.svg
+Source: https://github.com/lucide-icons/lucide
+
+Lucide icons are used throughout the interface via the lucide-react package.
 
 ISC License
 

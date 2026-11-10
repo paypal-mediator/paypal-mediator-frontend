@@ -3,13 +3,13 @@ import Badge from './Badge';
 import Combobox from './Combobox';
 import { changeMember, inviteMember, teamRoles } from './lib/team';
 
-export default function TeamSettings({ merchant, account }) {
+export default function TeamSettings({ merchant, account, inviteInitially = false }) {
   const key = `merchant:${merchant.id}:team`;
   const [members, setMembers] = useState(() => {
     try { const saved = JSON.parse(localStorage.getItem(key)); if (Array.isArray(saved) && saved.length) return saved; } catch { /* Start with the merchant administrator. */ }
     return [{ id: account.id, name: account.displayName, email: account.email, role: 'Admin', status: 'Active' }];
   });
-  const [inviting, setInviting] = useState(false);
+  const [inviting, setInviting] = useState(inviteInitially);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Member');
   const [editing, setEditing] = useState(null);

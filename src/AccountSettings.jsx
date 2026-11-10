@@ -10,7 +10,7 @@ export function InformationSettings({ profile: identity, scope = 'account', onSa
   const isMerchant = scope === 'merchant';
   const key = `${scope}:${identity.id}:profile`;
   const initial = { displayName: identity.displayName, contactName: '', email: identity.email || '', phone: identity.phone || '', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone };
-  const [saved, setSaved] = useState(() => read(key, initial));
+  const [saved, setSaved] = useState(() => ({ ...initial, ...read(key, {}) }));
   const [profile, setProfile] = useState(saved);
   const [status, setStatus] = useState('');
   const save = event => {
@@ -54,14 +54,14 @@ export function SecuritySettings({ account }) {
   };
   const verify = event => {
     event.preventDefault();
-    if (code !== '123456') return setError('That code is incorrect. Try 123456 for this preview.');
+    if (code !== '123456') return setError('That code is incorrect. Check your code and try again.');
     update({ twoFactor: action === 'enable' }, action === 'enable' ? 'Two-factor authentication enabled.' : 'Two-factor authentication disabled.');
   };
   return <><div className="settings-section-heading"><h2>Security</h2><p>Manage access and protect your account.</p></div>
     <div className="settings-info-row"><span><strong>Password</strong><small>{security.passwordChanged ? `Last changed ${new Date(security.passwordChanged).toLocaleDateString()}` : 'Choose a strong password to keep your account secure.'}</small></span><button className="button secondary" onClick={() => open('password')}>Change password</button></div>
     {action === 'password' && <form className="account-settings-form settings-action-panel" onSubmit={changePassword}><h3>Change password</h3>{[['current', 'Current password', 'current-password'], ['next', 'New password', 'new-password'], ['confirm', 'Confirm new password', 'new-password']].map(([id, title, autocomplete]) => <label key={id}>{title}<input autoFocus={id === 'current'} required type="password" autoComplete={autocomplete} minLength={id === 'current' ? 1 : 12} value={passwords[id]} onChange={event => setPasswords({ ...passwords, [id]: event.target.value })} /></label>)}<small>Use at least 12 characters.</small><div className="button-row"><button className="button primary">Update password</button><button type="button" className="button secondary" onClick={() => open(null)}>Cancel</button></div></form>}
     <div className="settings-info-row"><span><strong>Two-factor authentication</strong><small>Verify your identity with a code when signing in.</small></span><div className="settings-row-actions"><Badge>{security.twoFactor ? 'Enabled' : 'Off'}</Badge><button className="button secondary" onClick={() => open(security.twoFactor ? 'disable' : 'enable')}>{security.twoFactor ? 'Disable' : 'Set up'}</button></div></div>
-    {['enable', 'disable'].includes(action) && <form className="account-settings-form settings-action-panel" onSubmit={verify}><h3>{action === 'enable' ? 'Set up two-factor authentication' : 'Disable two-factor authentication'}</h3><p>{action === 'enable' ? 'Enter a verification code to finish setup.' : 'Enter a verification code to confirm this change.'}</p><label>Verification code<input autoFocus required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={code} onChange={event => setCode(event.target.value)} /></label><small>Preview verification code: 123456</small><div className="button-row"><button className="button primary">{action === 'enable' ? 'Verify and enable' : 'Confirm disable'}</button><button type="button" className="button secondary" onClick={() => open(null)}>Cancel</button></div></form>}
+    {['enable', 'disable'].includes(action) && <form className="account-settings-form settings-action-panel" onSubmit={verify}><h3>{action === 'enable' ? 'Set up two-factor authentication' : 'Disable two-factor authentication'}</h3><p>{action === 'enable' ? 'Enter a verification code to finish setup.' : 'Enter a verification code to confirm this change.'}</p><label>Verification code<input autoFocus required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} value={code} onChange={event => setCode(event.target.value)} /></label><div className="button-row"><button className="button primary">{action === 'enable' ? 'Verify and enable' : 'Confirm disable'}</button><button type="button" className="button secondary" onClick={() => open(null)}>Cancel</button></div></form>}
     <div className="settings-info-row"><span><strong>Active sessions</strong><small>Devices currently signed in to your account.</small></span>{security.otherSessions && <button className="button secondary" onClick={() => open('sessions')}>Sign out other sessions</button>}</div>
     <div className="settings-info-row"><span><strong>This browser</strong><small>Active now</small></span><Badge>Current session</Badge></div>
     {security.otherSessions && <div className="settings-info-row"><span><strong>Safari · iPhone</strong><small>Last active 2 hours ago</small></span><button className="text-button" onClick={() => open('sessions')}>Sign out</button></div>}

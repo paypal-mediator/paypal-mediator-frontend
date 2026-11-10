@@ -1,3 +1,4 @@
+import Icon from './Icon';
 import React, { useState } from 'react';
 
 /** Product image URL is supplied by the transaction data, never fetched here. */
@@ -12,9 +13,6 @@ export default function ProductThumbnail({ imageUrl = null, className = '' }) {
       loading="lazy"
       decoding="async"
       onError={() => setFailedUrl(imageUrl)}
-    /> : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="m12 3 9 5v8l-9 5-9-5V8Z" />
-      <path d="m3 8 9 5 9-5M12 13v8M7.5 5.5l9 5" />
-    </svg>}
+    /> : <Icon name="Package" />}
   </span>;
 }

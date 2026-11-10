@@ -1,10 +1,11 @@
 import Badge from './Badge';
+import TeamManagement from './TeamManagement';
 import TeamSettings from './TeamSettings';
 import SidebarIcon from './SidebarIcon';
 import React, { useEffect, useRef, useState } from 'react';
 import { InformationSettings, SecuritySettings } from './AccountSettings';
 import { label, date } from './lib/format';
-const categories = { account: ['Information', 'Security', 'Notifications'], merchant: ['Information', 'Teams', 'Policies', 'Integrations'] };
+const categories = { account: ['Information', 'Security', 'Notifications'], merchant: ['Information', 'Teams', 'Policies', 'Integrations', 'General'] };
 const notificationOptions = [
   ['disputes', 'Dispute updates', 'New disputes and changes to existing cases.'],
   ['deadlines', 'Deadline reminders', 'Upcoming response deadlines that need your attention.'],
@@ -18,9 +19,9 @@ function readPreferences(key) {
     return { disputes: true, deadlines: true, evidence: true };
   }
 }
-export default function Settings({ merchant, account, integration, scope = 'account', onProfileSave }) {
+export default function Settings({ merchant, account, integration, scope = 'account', onProfileSave, initialSection = 'Information', inviteInitially = false, management }) {
   const sections = categories[scope];
-  const [active, setActive] = useState('Information');
+  const [active, setActive] = useState(initialSection);
   const preferenceKey = `account:${account.id}:notifications`;
   const [preferences, setPreferences] = useState(() => readPreferences(preferenceKey));
   const [notice, setNotice] = useState('');
@@ -61,7 +62,8 @@ export default function Settings({ merchant, account, integration, scope = 'acco
         <p role="status" aria-live="polite">{notice}</p>
       </form>
     </>}
-    {active === 'Teams' && <TeamSettings key={merchant.id} merchant={merchant} account={account} />}
+    {active === 'Teams' && <TeamSettings key={merchant.id} merchant={merchant} account={account} inviteInitially={inviteInitially} />}
+    {active === 'General' && <TeamManagement merchant={merchant} {...management} />}
     {active === 'Policies' && <>{[['Investigations allowed', merchant.policy.allowInvestigations], ['Submissions allowed', merchant.policy.allowSubmissions], ['Merchant approval required', merchant.policy.requireMerchantApproval]].map(([name, enabled]) => <div className="settings-info-row" key={name}><strong>{name}</strong><Badge>{enabled ? 'Yes' : 'No'}</Badge></div>)}<p>Policy changes require administrator access. Merchant approval is mandatory.</p></>}
     {active === 'Integrations' && <><div className="card-heading"><h2>PayPal</h2></div><dl><div><dt>Connection</dt><dd>{label(integration.connectionStatus)}</dd></div><div><dt>Dispute read access</dt><dd>{label(integration.disputesReadStatus)}</dd></div><div><dt>Credentials configured</dt><dd>{integration.credentialsConfigured ? 'Yes' : 'No'}</dd></div><div><dt>Webhook configured</dt><dd>{integration.webhookConfigured ? 'Yes' : 'No'}</dd></div><div><dt>Last checked</dt><dd>{date(integration.lastCheckedAt)}</dd></div></dl></>}
   </div></section></div>;

@@ -1,3 +1,4 @@
+import Icon from './Icon';
 import React, { useEffect, useId, useRef, useState } from 'react';
 
 export default function TimeZoneCombobox({ value, onChange }) {
@@ -30,8 +31,8 @@ export default function TimeZoneCombobox({ value, onChange }) {
           setActive(current => options.length ? (open ? (current + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length : Math.max(0, options.indexOf(value))) : 0);
         } else if (event.key === 'Enter' && open) { event.preventDefault(); event.stopPropagation(); if (options[active]) choose(options[active]); }
       }} />
-      <button type="button" aria-label={open ? 'Close time zones' : 'Show time zones'} onClick={() => { setOpen(!open); setQuery(''); setActive(0); input.current?.focus(); }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d={open ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'} /></svg></button>
+      <button type="button" aria-label={open ? 'Close time zones' : 'Show time zones'} onClick={() => { setOpen(!open); setQuery(''); setActive(0); input.current?.focus(); }}><Icon name={open ? 'ChevronUp' : 'ChevronDown'} /></button>
     </div>
-    {open && <div className="combobox-options"><div role="listbox" id={`${id}-listbox`} aria-label="Time zones">{options.map((zone, index) => <div key={zone} id={`${id}-option-${index}`} role="option" aria-selected={zone === value} className={`combobox-option ${active === index ? 'highlighted' : ''}`} onPointerMove={() => setActive(index)} onMouseDown={event => event.preventDefault()} onClick={() => choose(zone)}><span>{zone.replaceAll('_', ' ')}</span>{zone === value && <span aria-hidden="true">✓</span>}</div>)}</div>{!options.length && <div className="combobox-empty" role="status">No time zones found.</div>}</div>}
+    {open && <div className="combobox-options"><div role="listbox" id={`${id}-listbox`} aria-label="Time zones">{options.map((zone, index) => <div key={zone} id={`${id}-option-${index}`} role="option" aria-selected={zone === value} className={`combobox-option ${active === index ? 'highlighted' : ''}`} onPointerMove={() => setActive(index)} onMouseDown={event => event.preventDefault()} onClick={() => choose(zone)}><span>{zone.replaceAll('_', ' ')}</span>{zone === value && <Icon name="Check" />}</div>)}</div>{!options.length && <div className="combobox-empty" role="status">No time zones found.</div>}</div>}
   </div></div>;
 }

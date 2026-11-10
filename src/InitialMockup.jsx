@@ -12,7 +12,7 @@ function PanelTop({ subtitle = false, control = false }) {
 }
 
 export default function InitialMockup() {
-  return <section className="initial-mockup" aria-label="Initial dashboard mockup with empty placeholders">
+  return <section className="initial-mockup" aria-label="Dashboard loading">
     <div aria-hidden="true">
       <div className="mock-heading"><div><Bar kind="heading" /><Bar kind="subtitle" /></div><div className="mock-actions"><span /><span /></div></div>
       <div className="mock-summary-grid">{Array.from({ length: 4 }, (_, index) => <Panel key={index} kind="mock-summary"><PanelTop /><Bar kind="value" /><div className="mock-summary-footer"><Bar kind="pill" /><Bar /></div></Panel>)}</div>
