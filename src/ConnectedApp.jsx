@@ -15,6 +15,7 @@ import ProfileAvatar from './ProfileAvatar';
 import Inbox from './Inbox';
 import Icon from './Icon';
 import Badge from './Badge';
+import EmptyAccountDashboard from './EmptyAccountDashboard';
 import {
   date,
   label,
@@ -302,6 +303,19 @@ function Overview({ api, merchant, onPage }) {
   );
 }
 export default function ConnectedApp({ api, auth, session }) {
+  const teams = useRemote((signal) => api.merchants(signal), [api]);
+  return (
+    <RemoteState resource={teams}>
+      {(data) => data.items.length === 0 ? (
+        <EmptyAccountDashboard auth={auth} session={session} onRefresh={teams.reload} />
+      ) : (
+        <MerchantWorkspace api={api} auth={auth} session={session} />
+      )}
+    </RemoteState>
+  );
+}
+
+function MerchantWorkspace({ api, auth, session }) {
   const core = useRemote((signal) => api.merchant(signal), [api]);
   const activity = useRemote(
     (signal) => api.activity({ limit: 30 }, signal),
