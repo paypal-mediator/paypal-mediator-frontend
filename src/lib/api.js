@@ -28,6 +28,9 @@ export function createApi({ baseUrl, getAccessToken }) {
   return {
     merchant: signal => get('/merchants/me', signal),
     merchants: signal => get('/merchants', signal),
+    createMerchant: body => post('/merchants', body),
+    merchantInvitations: signal => get('/merchant-invitations', signal),
+    acceptMerchantInvitation: invitationId => post(`/merchant-invitations/${id(invitationId)}/accept`),
     integrations: signal => get('/settings/integrations', signal),
     transactions: ({ page = 1, pageSize = 20, paypalCaptureId } = {}, signal) => get(`/transactions?${query({ page, pageSize, paypalCaptureId }, ['page', 'pageSize', 'paypalCaptureId'])}`, signal),
     transaction: (transactionId, signal) => get(`/transactions/${id(transactionId)}`, signal),

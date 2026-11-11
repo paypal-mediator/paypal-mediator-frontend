@@ -16,6 +16,7 @@ import Inbox from './Inbox';
 import Icon from './Icon';
 import Badge from './Badge';
 import EmptyAccountDashboard from './EmptyAccountDashboard';
+import TeamAccessDialog from './TeamAccessDialog';
 import {
   date,
   label,
@@ -304,18 +305,22 @@ function Overview({ api, merchant, onPage }) {
 }
 export default function ConnectedApp({ api, auth, session }) {
   const teams = useRemote((signal) => api.merchants(signal), [api]);
+  const [teamDialog, setTeamDialog] = useState(null);
   return (
+    <>
     <RemoteState resource={teams}>
       {(data) => data.items.length === 0 ? (
-        <EmptyAccountDashboard auth={auth} session={session} onRefresh={teams.reload} />
+        <EmptyAccountDashboard api={api} auth={auth} session={session} onCreateTeam={() => setTeamDialog('create')} onJoinTeam={() => setTeamDialog('join')} />
       ) : (
-        <MerchantWorkspace api={api} auth={auth} session={session} />
+        <MerchantWorkspace api={api} auth={auth} session={session} onCreateTeam={() => setTeamDialog('create')} />
       )}
     </RemoteState>
+    {teamDialog && <TeamAccessDialog key={teamDialog} mode={teamDialog} api={api} onClose={() => setTeamDialog(null)} onComplete={() => { setTeamDialog(null); teams.reload(); }} />}
+    </>
   );
 }
 
-function MerchantWorkspace({ api, auth, session }) {
+function MerchantWorkspace({ api, auth, session, onCreateTeam }) {
   const core = useRemote((signal) => api.merchant(signal), [api]);
   const activity = useRemote(
     (signal) => api.activity({ limit: 30 }, signal),
@@ -625,6 +630,7 @@ function MerchantWorkspace({ api, auth, session }) {
               ))}
             </div>
           </div>
+          <div className="team-heading-row"><button type="button" className="team-folder new-team-option" onClick={onCreateTeam}><Icon name="Plus" className="sidebar-icon" /><span>New team</span></button></div>
         </nav>
       </aside>
       <Inbox
