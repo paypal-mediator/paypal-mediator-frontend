@@ -1,5 +1,5 @@
 export function money(amount) {
-  if (!amount) return '—';
+  if (!amount || typeof amount.value !== 'string' || !amount.currencyCode) return '—';
   // Keep monetary values as decimal strings; do not convert to floating point.
   const [whole, fraction = ''] = amount.value.split('.');
   return `${amount.currencyCode} ${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${fraction.padEnd(2, '0')}`;
@@ -10,7 +10,7 @@ export const transactionName = transaction => transaction.paypalCaptureId || tra
 
 export function transactionSubtitle(transaction) {
   const reference = transaction.order?.externalId || transaction.merchantOrderReference || 'No linked order';
-  const count = transaction.order?.items.reduce((total, item) => total + item.quantity, 0);
+  const count = transaction.order?.items.every(item => Number.isInteger(item.quantity)) ? transaction.order.items.reduce((total, item) => total + item.quantity, 0) : null;
   return count ? `${reference} · ${count} ${count === 1 ? 'item' : 'items'}` : reference;
 }
 

@@ -32,14 +32,14 @@ test('API client requires a session, sends exact supported filters, and preserve
   const original = globalThis.fetch;
   const calls = [];
   try {
-    globalThis.fetch = async (url, options) => { calls.push({ url, options }); return { ok: true, json: async () => ({ items: [], total: 0, page: 2, pageSize: 20 }) }; };
+    globalThis.fetch = async (url, options) => { calls.push({ url, options }); return Response.json({ items: [], total: 0, page: 2, pageSize: 20 }); };
     await assert.rejects(createApi({ baseUrl: '/api', getAccessToken: async () => null }).merchant(), error => error.status === 401);
     assert.equal(calls.length, 0);
     const api = createApi({ baseUrl: 'https://example.test/api/', getAccessToken: async () => 'user-access-token' });
     await api.transactions({ page: 2, paypalCaptureId: 'CAPTURE-1' });
     assert.equal(calls[0].url, 'https://example.test/api/transactions?page=2&pageSize=20&paypalCaptureId=CAPTURE-1');
     assert.equal(calls[0].options.headers.Authorization, 'Bearer user-access-token');
-    globalThis.fetch = async () => ({ ok: false, status: 403, json: async () => ({ code: 'FORBIDDEN', message: 'Not permitted', requestId: 'request-1' }) });
+    globalThis.fetch = async () => Response.json({ code: 'FORBIDDEN', message: 'Not permitted', requestId: 'request-1' }, { status: 403 });
     await assert.rejects(api.merchant(), error => error.status === 403 && error.requestId === 'request-1' && error.code === 'FORBIDDEN');
   } finally { globalThis.fetch = original; }
 });

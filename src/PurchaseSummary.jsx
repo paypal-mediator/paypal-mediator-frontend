@@ -12,6 +12,6 @@ export default function PurchaseSummary({ order: transaction }) {
     {transaction.orderLink.reason && <p>{label(transaction.orderLink.reason)}</p>}
 
     {order && <><div className="summary-section"><h3>Amount breakdown</h3><dl><Row name="Shipping">{money({ currencyCode: order.currencyCode, value: order.shippingAmount })}</Row><Row name="Tax">{money({ currencyCode: order.currencyCode, value: order.taxAmount })}</Row><Row name="Discount">{money({ currencyCode: order.currencyCode, value: order.discountAmount })}</Row><Row name="Order total">{money({ currencyCode: order.currencyCode, value: order.totalAmount })}</Row></dl></div>
-    <div className="summary-section"><h3>Item details <span className="muted">{order.items.length}</span></h3>{order.items.map((item, index) => <div className="summary-item" key={index}><strong>{item.description}</strong><dl><Row name="SKU">{item.sku}</Row><Row name="Quantity">{item.quantity}</Row><Row name="Unit price">{money({ currencyCode: order.currencyCode, value: item.unitAmount })}</Row></dl></div>)}</div></>}
+    <div className="summary-section"><h3>Item details <span className="muted">{order.items.length}</span></h3>{order.items.map((item, index) => <div className="summary-item" key={index}><strong>{item.description || 'Item details unavailable'}</strong><dl><Row name="SKU">{item.sku}</Row><Row name="Quantity">{item.quantity}</Row><Row name="Unit price">{money({ currencyCode: order.currencyCode, value: item.unitAmount })}</Row></dl></div>)}</div></>}
   </section>;
 }

@@ -1,8 +1,9 @@
 import Icon from './Icon';
+import { liveEnabled } from './lib/runtime';
 import EvidenceScreen from './EvidenceScreen';
 import DisputeWorkspace from './DisputeWorkspace';
 import Badge from './Badge';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import ProfileAvatar from './ProfileAvatar';
 import ProductThumbnail from './ProductThumbnail';
@@ -18,6 +19,7 @@ import CreateMerchantDialog from './CreateMerchantDialog';
 import { transactions as allTransactions, evidenceSnapshots, notifications, merchants, account as accountFixture, integration as defaultIntegration } from './data/fixtures';
 import { date, disputeReference, label, money, transactionName, transactionSubtitle } from './lib/format';
 import './styles.css';
+const LiveRoot = lazy(() => import('./LiveRoot'));
 const nav = [['overview', 'Overview'], ['transactions', 'Transactions'], ['disputes', 'Disputes'], ['activity', 'Agent Activity']];
 const Card = ({ children, className = '' }) => <section className={`card ${className}`}>{children}</section>;
 const rootPage = page => ['dispute-details', 'dispute-evidence'].includes(page) ? 'disputes' : ['details', 'evidence'].includes(page) ? 'transactions' : page;
@@ -286,4 +288,4 @@ function App() {
     {page === 'activity' && (transactions.length ? <DisputeWorkspace key={merchant.id} page={page} account={account} transaction={transactions[0]} onCaseOpen={() => { setSelected(transactions[0].id); go('dispute-details'); }} onTransaction={() => open(transactions[0])} onEvidence={() => { setSelected(transactions[0].id); go('dispute-evidence'); }} /> : <Card><h2>No activity yet</h2><p>Team activity for {merchant.displayName} will appear here.</p></Card>)}
   </>} </div></main><dialog className="settings-dialog" ref={dialogRef} tabIndex={-1} aria-label={settingsScope === 'merchant' ? 'Merchant settings' : 'Account settings'} onCancel={() => setSettingsOpen(false)} onClose={event => { if (!event.currentTarget.open) setSettingsOpen(false); }} onClick={event => { if (event.target === event.currentTarget) { const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) setSettingsOpen(false); } }}><button className="settings-close" aria-label="Close settings" onClick={() => setSettingsOpen(false)}><Icon name="X" /></button><Settings key={`${settingsScope}:${merchant.id}:${settingsLaunch.section}:${settingsLaunch.invite}`} initialSection={settingsLaunch.section} inviteInitially={settingsLaunch.invite} management={{ onExpandAll: () => setExpandedTeams(orderedTeams.map(team => team.id)), onCollapseAll: () => setExpandedTeams([]), onLeave: () => hideTeam('left'), onArchive: () => hideTeam('archived'), canManage: canManageTeam(merchant.id), archivedTeams: merchantProfiles.filter(team => teamStates[team.id] === 'archived'), onRestore: restoreTeam }} merchant={merchant} account={account} integration={integration} scope={settingsScope} onProfileSave={profile => { if (settingsScope === 'merchant') setMerchantProfiles(items => items.map(item => item.id === activeMerchantId ? { ...item, ...profile } : item)); else setAccount(current => ({ ...current, ...profile })); }} /></dialog>{renamingTeam && <RenameTeamDialog team={renamingTeam} onSave={renameTeam} onClose={() => setRenamingTeam(null)} />}{createTeamOpen && <CreateMerchantDialog account={account} onCreate={createTeam} onClose={() => setCreateTeamOpen(false)} />}</div>;
 }
-createRoot(document.getElementById('root')).render(<App />);
+createRoot(document.getElementById('root')).render(liveEnabled ? <Suspense fallback={<div className="signed-out" role="status">Loading workspace…</div>}><LiveRoot /></Suspense> : <App />);

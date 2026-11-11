@@ -1,35 +1,41 @@
 # ResolveAI frontend
 
-React frontend aligned with the implemented M01–M04 backend contracts in the sibling `paypal-mediator-backend` repository. Dark dashboard with fixed navigation, keyboard shortcuts, transaction details, document readiness, evidence history, and merchant settings.
+Standalone React frontend with the same screens, connected API adapter, routing, and runtime configuration as `paypal-mediator-production/apps/web`. Dark dashboard with fixed navigation, keyboard shortcuts, transaction details, document readiness, evidence history, and merchant settings.
 
 ```sh
 npm install
 npm run dev
 npm test
+npm run lint
+npm run typecheck
 npm run build
 ```
 
 Development uses `http://localhost:3000`, matching the backend's documented CORS origin. Build output is in `dist`.
 
-## Current data and integration boundary
+## Connect to the backend
 
-The UI currently reads explicit fixtures in `src/data/fixtures.js`. It does **not** connect to Supabase Auth or the live backend. Settings are read-only; there are no fake save/check/upload operations. The fixture payment records are illustrative, not actual PayPal transactions. Order/evidence sources retain their `DEMO` provenance in the UI.
+Copy `.env.example` to `.env.local`, set the Supabase project URL and publishable browser key, then restart Vite. Sign in with an existing Supabase user who has an active merchant membership. The API URL includes `/api`. Keep service-role keys and PayPal credentials on the server.
 
-`src/lib/api.js` provides an unconnected authenticated API adapter. Pass an API base URL **including `/api`** and a `getAccessToken()` function returning the current Supabase user's access token. It exposes the implemented merchant, integration, transaction, order registration, and structured evidence endpoints. It preserves backend error `code`, `message`, `requestId`, and HTTP status. No credentials or tokens are bundled with the app. Supabase session creation/refresh and live loading/error/pagination states remain integration work.
+Connected mode uses Supabase sessions and the authorized backend for merchant settings, PayPal status checks, paginated transactions and disputes, evidence uploads and downloads, investigation and verification runs, activity, and billing records. Uploads accept PDF, PNG, and JPEG files up to 512 KiB. Readiness filters apply to the current transaction page. The backend resolves the merchant context, so connected mode displays the merchant returned by `GET /merchants/me`.
 
-Use `GET /transactions` for server pagination (`page`, `pageSize`) and exact `paypalCaptureId` lookup. The current fixture list supports exact capture ID search; readiness filters operate on loaded records, not an unsupported backend query. Overview counts are derived from loaded fixtures, not a backend analytics endpoint. Real paginated results must not be treated as global totals for readiness categories.
+Dispute submission requires explicit approval and uses the backend's verified evidence. Edits to the displayed draft stay in the field. Billing creates subscription records. Card processing and buyer chat still need backend support. Team creation and member invitation APIs exist in the production backend but are not connected to these screens. ERP credential entry stays out of connected mode while credential verification and encrypted storage are unfinished.
 
-## Contract alignment
+Live mode is the default, matching the production frontend. Without Supabase configuration, the app displays connection setup. For the local design workspace without backend credentials, create `.env.local` containing:
 
-- Transactions: UUID identity, PayPal capture/order references, `COMPLETED` payment status, decimal-string amount and currency.
-- Order linking: `LINKED`, `UNLINKED`, `CONFLICT`; linked orders provide items and shipping/tax/discount amounts.
-- Document coverage: `READY`, `INCOMPLETE`, `NEEDS_REVIEW` plus five checks with `PRESENT`, `MISSING`, `CONFLICT`. This is not PayPal Seller Protection or an assurance of winning a dispute.
-- Evidence: dossier revision, original structured records, versions, provenance, hashes, current/historical status, and integrity.
-- Settings: merchant identity/role, investigation/submission policy, mandatory approval, and independent PayPal connection/dispute-read states.
-- Disputes and Agent Activity have frontend fixture screens: case list, buyer report, merchant response, evidence picker, defense checklist, and activity filters. M05–M09 APIs remain pending, so preparation/submission buttons are disabled; selected files stay local. Shared buyer/seller conversations, refund agreements, dispute creation, and simulated agent actions were removed.
-- Binary uploads, billing, notifications, password management, product photos, buyer contact details, card digits, variants, and refunds are not provided by current transaction contracts and are not presented as supported features.
+```env
+VITE_DATA_MODE=preview
+```
 
-`ProductThumbnail` remains reusable for a future catalog image extension, with a neutral fallback. Current backend order items have no image field.
+Restart the dev server after changing environment variables. Existing `NEXT_PUBLIC_API_BASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` values are supported; the corresponding `VITE_` variables take precedence. Only public configuration belongs in the browser.
+
+## Routing and deployment
+
+Connected screens have stable URLs: `/transactions`, `/transactions/:id`, `/transactions/:id/evidence`, `/disputes`, `/disputes/:id`, `/disputes/:id/evidence/:transactionId`, `/activity`, and `/settings`. Reloads and browser back/forward restore the screen. Legacy `/login?callbackUrl=/transactions` links return to the requested screen after sign-in; external return destinations are ignored.
+
+Deploy this standalone repository with the Vite preset and repository root as the root directory. `vercel.json` uses `npm ci`, `npm run build`, the `dist` output directory, and SPA rewrites for direct screen URLs. No monorepo workspace filter is needed.
+
+The merchant team backend in `paypal-mediator-production` adds team creation, invitations, and selected-team headers. Those flows are not wired into either frontend yet; this synchronization preserves their current behavior.
 
 ## Keyboard controls
 
@@ -39,6 +45,4 @@ Use `GET /transactions` for server pagination (`page`, `pageSize`) and exact `pa
 - Escape: evidence → transaction details → Transactions → sidebar focus.
 - Settings: Up/Down switches categories; Escape closes the dialog.
 
-Tests cover fixture relationships, exact currency formatting without floating-point conversion, and authenticated API request/error behavior. They do not verify live services or browser rendering.
-
-Evidence history uses explicit revision snapshots from `evidenceSnapshots` for the frontend: selecting a revision updates the category cards, historical views are read-only, and closing history returns to the current version. The current backend exposes evidence item versions but does not expose complete dossier snapshots per revision. Historical snapshot loading/reconstruction needs a backend contract before connecting this view to live data. No restore-to-old-version write is implemented.
+Tests cover authenticated API requests, query filters, idempotency keys, binary evidence, nullable order fields, stale investigation and verification runs, URL routing, and public runtime configuration.
