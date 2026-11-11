@@ -11,7 +11,17 @@ const countries = ['United States', 'Canada', 'United Kingdom', 'Australia', 'Fr
 function Field({ title, value, onChange, ...props }) {
   return <label>{title}<input required value={value} onChange={event => onChange(event.target.value)} {...props} /></label>;
 }
-export default function CreateMerchantDialog({ account, onCreate, onClose }) {
+function CreationStatus() {
+  const message = 'Creating team…';
+  const [length, setLength] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setLength(message.length); return; }
+    const timer = setInterval(() => setLength(current => Math.min(current + 1, message.length)), 45);
+    return () => clearInterval(timer);
+  }, []);
+  return <div className="team-creation-feedback" role="status" aria-live="polite" aria-label={message} tabIndex={-1}><div className="empty-account-icon"><Icon name="Users" size={28} /></div><h2 aria-hidden="true" className="creation-status-text">{message.slice(0, length)}<span className="creation-typing-caret">|</span></h2><p>Your workspace will stay here while we create your team.</p></div>;
+}
+export default function CreateMerchantDialog({ account, onCreate, onClose, onOpenTeam }) {
   const dialog = useRef(null);
   const [step, setStep] = useState(0);
   const [completed, setCompleted] = useState(0);
@@ -24,6 +34,8 @@ export default function CreateMerchantDialog({ account, onCreate, onClose }) {
   const [authorizing, setAuthorizing] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [createdTeam, setCreatedTeam] = useState(null);
+  const creationInFlight = useRef(false);
   useEffect(() => {
     const previous = document.activeElement;
     dialog.current.showModal();
@@ -33,9 +45,11 @@ export default function CreateMerchantDialog({ account, onCreate, onClose }) {
     return () => { document.body.style.overflow = overflow; previous?.focus(); };
   }, []);
   useEffect(() => { if (step > 0) dialog.current.querySelector('.setup-step-heading')?.focus(); }, [step]);
+  useEffect(() => { if (saving || createdTeam) dialog.current.querySelector('.team-creation-feedback')?.focus(); }, [saving, createdTeam]);
   const move = next => { setStep(next); setError(''); setAuthorizing(false); };
   const submit = async event => {
     event.preventDefault(); setError('');
+    if (creationInFlight.current || createdTeam) return;
     if (step === 0 && Object.values(details).some(value => !value.trim())) return setError('Complete all business information fields.');
     if (step === 1 && ['street', 'city', 'region', 'postalCode', 'country'].some(key => !address[key].trim())) return setError('Complete your business address.');
     if (step === 2) {
@@ -54,15 +68,17 @@ export default function CreateMerchantDialog({ account, onCreate, onClose }) {
     const payment = { brand: digits.startsWith('4') ? 'Visa' : digits.startsWith('5') ? 'Mastercard' : 'Card', last4: digits.slice(-4), status: 'PREVIEW' };
     const integration = { provider: 'PAYPAL', environment: 'sandbox', credentialsConfigured: paypal, webhookConfigured: paypal, connectionStatus: paypal ? 'CONNECTED' : 'NOT_CONFIGURED', disputesReadStatus: paypal ? 'GRANTED' : 'NOT_CHECKED', lastCheckedAt: paypal ? new Date().toISOString() : null, source: 'DEMO' };
     setSaving(true);
-    try { await onCreate({ ...Object.fromEntries(Object.entries(details).map(([key, value]) => [key, value.trim()])), address: Object.fromEntries(Object.entries(address).map(([key, value]) => [key, value.trim()])), payment, integration, subscription: { planId: selectedPlan.id, planName: selectedPlan.name, price: selectedPlan.price } }); }
+    creationInFlight.current = true;
+    try { const team = await onCreate({ ...Object.fromEntries(Object.entries(details).map(([key, value]) => [key, value.trim()])), address: Object.fromEntries(Object.entries(address).map(([key, value]) => [key, value.trim()])), payment, integration, subscription: { planId: selectedPlan.id, planName: selectedPlan.name, price: selectedPlan.price } }); setCreatedTeam(team || { displayName: details.displayName }); }
     catch (failure) { setError(failure.message || 'Could not create the team. Please try again.'); }
-    finally { setSaving(false); }
+    finally { creationInFlight.current = false; setSaving(false); }
   };
   const editDetails = (key, value) => setDetails(current => ({ ...current, [key]: value }));
-  return <dialog className="settings-dialog merchant-create-dialog" ref={dialog} aria-label="Create a team" onCancel={event => { event.preventDefault(); onClose(); }} onClick={event => { if (event.target !== event.currentTarget) return; const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) onClose(); }}>
-    <button type="button" className="settings-close" aria-label="Close create team" onClick={onClose}><Icon name="X" /></button>
-    <div className="settings-layout"><nav className="settings-nav" aria-label="Team setup">{steps.map((title, index) => <button type="button" className={`nav-item ${step === index ? 'active' : ''}`} aria-current={step === index ? 'step' : undefined} disabled={index > completed} onClick={() => move(index)} key={title}><SidebarIcon name={stepIcons[index]} />{title}</button>)}</nav>
+  return <dialog className="settings-dialog merchant-create-dialog" ref={dialog} aria-label="Create a team" onCancel={event => { event.preventDefault(); if (!saving) onClose(); }} onClick={event => { if (saving || event.target !== event.currentTarget) return; const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) onClose(); }}>
+    <button type="button" className="settings-close" aria-label="Close create team" disabled={saving} onClick={onClose}><Icon name="X" /></button>
+    <div className="settings-layout"><nav className="settings-nav" aria-label="Team setup">{steps.map((title, index) => <button type="button" className={`nav-item ${step === index ? 'active' : ''}`} aria-current={step === index ? 'step' : undefined} disabled={saving || !!createdTeam || index > completed} onClick={() => move(index)} key={title}><SidebarIcon name={stepIcons[index]} />{title}</button>)}</nav>
       <section className="card settings-content"><div className="settings-content-inner">
+        {saving ? <CreationStatus /> : createdTeam ? <div className="team-creation-feedback" role="status" aria-live="polite" tabIndex={-1}><div className="empty-account-icon"><Icon name="Check" size={28} /></div><h2>Team created</h2><p>{createdTeam.displayName} is ready. Open it whenever you’re ready.</p><div className="button-row"><button type="button" className="button primary" onClick={onClose}>Done</button>{onOpenTeam && createdTeam.id && <button type="button" className="button secondary" onClick={() => onOpenTeam(createdTeam)}>Open team</button>}</div></div> : <>
         <form className="account-settings-form account-information-form" onChange={() => setCompleted(value => Math.min(value, step))} onSubmit={submit}>
           <h3 className="setup-step-heading" tabIndex={-1}>{steps[step]}</h3>
           {step === 0 && <>{[['displayName', 'Merchant name', 'text', 'organization'], ['contactName', 'Contact name', 'text', 'name'], ['email', 'Business email', 'email', 'email'], ['phone', 'Business phone', 'tel', 'tel']].map(([key, title, type, autocomplete]) => <Field key={key} title={title} type={type} maxLength={key === 'displayName' ? 80 : 254} autoComplete={autocomplete} value={details[key]} onChange={value => editDetails(key, value)} />)}<TimeZoneCombobox value={details.timezone} onChange={value => editDetails('timezone', value)} /></>}
@@ -78,6 +94,7 @@ export default function CreateMerchantDialog({ account, onCreate, onClose }) {
           {error && <p role="alert">{error}</p>}
           <div className="button-row merchant-create-actions"><button type="submit" className="button primary" disabled={saving || (step === 2 && !selectedPlan)}>{saving ? 'Creating…' : step < 4 ? 'Continue' : 'Create team'}</button><button type="button" className="button secondary" disabled={saving} onClick={step === 0 ? onClose : () => move(step - 1)}>{step === 0 ? 'Cancel' : 'Back'}</button></div>
         </form>
+        </>}
       </div></section>
     </div>
   </dialog>;

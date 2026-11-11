@@ -26,6 +26,12 @@ rows visible; successful writes invalidate cached reads. Extra pages, filters, a
 unvisited detail records load on demand and are reused on return. Failed sections
 keep their own retry state without blocking the other tables.
 
+The sidebar lists all active teams. Creating another team adds it to that list
+without replacing the current workspace or navigating away. The wizard displays
+creation progress and a confirmation; opening the new team is an explicit action.
+For a first team, the account stays on the team chooser until the user opens it.
+Team selection is remembered per account, and each team's data cache stays separate.
+
 Dispute submission requires explicit approval and uses the backend's verified evidence. Edits to the displayed draft stay in the field. Billing creates subscription records. Card processing and buyer chat still need backend support. Team creation and member invitation APIs exist in the production backend but are not connected to these screens. ERP credential entry stays out of connected mode while credential verification and encrypted storage are unfinished.
 
 Live mode is the default, matching the production frontend. Without Supabase configuration, the app displays connection setup. For the local design workspace without backend credentials, create `.env.local` containing:

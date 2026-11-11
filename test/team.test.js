@@ -1,7 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { inviteMember, changeMember } from '../src/lib/team.js';
+import { inviteMember, changeMember, mergeTeamMemberships } from '../src/lib/team.js';
 const admin = { id: 'owner', email: 'owner@example.com', role: 'Admin', status: 'Active' };
+test('adding or updating a team preserves all other memberships and their order', () => {
+  const existing = [{ id: 'alpha', displayName: 'Alpha', role: 'ADMIN' }, { id: 'beta', displayName: 'Beta', role: 'VIEWER' }];
+  const added = mergeTeamMemberships(existing, [{ id: 'gamma', displayName: 'Gamma', role: 'ADMIN' }]);
+  assert.deepEqual(added.map(team => team.id), ['alpha', 'beta', 'gamma']);
+  assert.deepEqual(existing.map(team => team.id), ['alpha', 'beta']);
+  const renamed = mergeTeamMemberships(added, [{ id: 'beta', displayName: 'Renamed' }]);
+  assert.deepEqual(renamed.map(team => team.id), ['alpha', 'beta', 'gamma']);
+  assert.equal(renamed[1].role, 'VIEWER');
+  assert.equal(renamed[1].displayName, 'Renamed');
+});
 test('merchant invitations normalize addresses and reject duplicate access', () => {
   const members = inviteMember([admin], ' Person@Example.com ', 'Member');
   assert.equal(members[1].email, 'person@example.com');

@@ -1,4 +1,9 @@
 export const teamRoles = ['Admin', 'Member', 'Viewer'];
+export function mergeTeamMemberships(existing, updates) {
+  const teams = new Map(existing.map(team => [team.id, team]));
+  for (const team of updates) teams.set(team.id, { ...teams.get(team.id), ...team });
+  return [...teams.values()];
+}
 export function inviteMember(members, email, role) {
   const normalized = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) throw new Error('Enter a valid email address.');

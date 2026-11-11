@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRemote } from './lib/useRemote';
 import { activityKey, preloadWorkspace, transactionKey, transactionListKey } from './lib/workspace-data';
 import { routeFromLocation, routePath } from './lib/routes';
+import { mergeTeamMemberships } from './lib/team';
 import { notificationFromActivity } from './lib/live';
 import RemoteState from './RemoteState';
 import LiveEvidence from './LiveEvidence';
@@ -311,20 +312,35 @@ function Overview({ api, merchant, onPage }) {
 export default function ConnectedApp({ api, auth, session }) {
   const teams = useRemote((signal) => api.merchants(signal), [api]);
   const [teamDialog, setTeamDialog] = useState(null);
+  const [teamUpdates, setTeamUpdates] = useState([]);
   const teamSelectionKey = `account:${session.user.id}:active-merchant`;
   const [selectedTeamId, setSelectedTeamId] = useState(() => { try { return localStorage.getItem(teamSelectionKey); } catch { return null; } });
-  const selected = teams.data?.items.find(team => team.id === selectedTeamId) || teams.data?.items[0];
-  const teamApi = useMemo(() => selected ? api.forMerchant(selected.id) : api, [api, selected?.id]);
+  const memberships = useMemo(() => mergeTeamMemberships(teams.data?.items || [], teamUpdates), [teams.data, teamUpdates]);
+  const selected = memberships.find(team => team.id === selectedTeamId) || teams.data?.items[0];
+  const scopedApis = useRef({ root: api, teams: new Map() });
+  const teamApi = useMemo(() => {
+    if (!selected) return api;
+    if (scopedApis.current.root !== api) scopedApis.current = { root: api, teams: new Map() };
+    if (!scopedApis.current.teams.has(selected.id)) scopedApis.current.teams.set(selected.id, api.forMerchant(selected.id));
+    return scopedApis.current.teams.get(selected.id);
+  }, [api, selected?.id]);
+  const selectTeam = (id, { settings = false } = {}) => {
+    if (!memberships.some(team => team.id === id)) return;
+    window.history.pushState(null, '', settings ? '/settings' : '/');
+    setSelectedTeamId(id);
+    try { localStorage.setItem(teamSelectionKey, id); } catch { /* Selection remains available without storage. */ }
+  };
+  const updateTeam = team => setTeamUpdates(current => mergeTeamMemberships(current, [team]));
   return (
     <>
     <RemoteState resource={teams}>
-      {(data) => data.items.length === 0 ? (
-        <EmptyAccountDashboard api={api} auth={auth} session={session} onCreateTeam={() => setTeamDialog('create')} onJoinTeam={() => setTeamDialog('join')} />
+      {() => !selected ? (
+        <EmptyAccountDashboard api={api} auth={auth} session={session} teams={memberships} onSelectTeam={selectTeam} onCreateTeam={() => setTeamDialog('create')} onJoinTeam={() => setTeamDialog('join')} />
       ) : (
-        <PreparedMerchantWorkspace key={selected.id} api={teamApi} auth={auth} session={session} onCreateTeam={() => setTeamDialog('create')} />
+        <PreparedMerchantWorkspace key={selected.id} api={teamApi} auth={auth} session={session} teams={memberships} onSelectTeam={selectTeam} onTeamUpdated={updateTeam} onCreateTeam={() => setTeamDialog('create')} />
       )}
     </RemoteState>
-    {teamDialog === 'create' && <CreateMerchantDialog account={{ displayName: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || '', email: session.user.email || '' }} onClose={() => setTeamDialog(null)} onCreate={async details => { const team = await api.createMerchant({ displayName: details.displayName }); setSelectedTeamId(team.id); try { localStorage.setItem(teamSelectionKey, team.id); } catch { /* Team selection also stays in memory. */ } setTeamDialog(null); teams.reload(); }} />}
+    {teamDialog === 'create' && <CreateMerchantDialog account={{ displayName: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || '', email: session.user.email || '' }} onClose={() => setTeamDialog(null)} onOpenTeam={team => { selectTeam(team.id); setTeamDialog(null); }} onCreate={async details => { const team = await api.createMerchant({ displayName: details.displayName }); updateTeam(team); return team; }} />}
     {teamDialog === 'join' && <TeamAccessDialog mode="join" api={api} onClose={() => setTeamDialog(null)} onComplete={() => { setTeamDialog(null); teams.reload(); }} />}
     </>
   );
@@ -336,7 +352,7 @@ function PreparedMerchantWorkspace(props) {
   return <MerchantWorkspace {...props} />;
 }
 
-function MerchantWorkspace({ api, auth, session, onCreateTeam }) {
+function MerchantWorkspace({ api, auth, session, teams, onSelectTeam, onTeamUpdated, onCreateTeam }) {
   const core = useRemote((signal) => api.merchant(signal), [api], { store: api.resources, key: 'merchant' });
   const activity = useRemote(
     (signal) => api.activity({ limit: 30 }, signal),
@@ -593,41 +609,45 @@ function MerchantWorkspace({ api, auth, session, onCreateTeam }) {
         ref={sidebar}
       >
         <nav className="team-sidebar" aria-label="Teams">
-          <div className="sidebar-team">
+          {teams.map(team => {
+            const active = team.id === merchant.id;
+            const displayName = active ? merchant.displayName : team.displayName;
+            return <div className="sidebar-team" key={team.id}>
             <div className="team-heading-row">
               <button
                 type="button"
-                className="team-folder current"
-                title={merchant.displayName}
-                aria-label={merchant.displayName}
-                aria-controls="connected-team-pages"
-                aria-expanded={expanded}
-                onClick={() => setExpanded((value) => !value)}
+                className={`team-folder ${active ? 'current' : ''}`}
+                title={displayName}
+                aria-label={displayName}
+                aria-controls={active ? 'connected-team-pages' : undefined}
+                aria-expanded={active && expanded}
+                onClick={() => active ? setExpanded((value) => !value) : onSelectTeam(team.id)}
                 onKeyDown={(event) => {
                   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
                     event.preventDefault();
-                    setExpanded(event.key === 'ArrowRight');
+                    if (active) setExpanded(event.key === 'ArrowRight');
+                    else if (event.key === 'ArrowRight') onSelectTeam(team.id);
                   }
                 }}
               >
                 <SidebarIcon name="folder" />
-                <span>{merchant.displayName}</span>
+                <span>{displayName}</span>
                 <Icon
-                  name={expanded ? 'ChevronDown' : 'ChevronRight'}
+                  name={active && expanded ? 'ChevronDown' : 'ChevronRight'}
                   className="team-toggle-chevron"
                 />
               </button>
               <button
                 type="button"
                 className="team-options-trigger"
-                aria-label={`Settings for ${merchant.displayName}`}
+                aria-label={`Settings for ${displayName}`}
                 title="Merchant settings"
-                onClick={() => openSettings('merchant')}
+                onClick={() => active ? openSettings('merchant') : onSelectTeam(team.id, { settings: true })}
               >
                 <Icon name="MoreHorizontal" />
               </button>
             </div>
-            <div
+            {active && <div
               className="team-folder-pages"
               id="connected-team-pages"
               hidden={!expanded}
@@ -645,14 +665,15 @@ function MerchantWorkspace({ api, auth, session, onCreateTeam }) {
                   {title}
                 </button>
               ))}
-            </div>
-          </div>
+            </div>}
+          </div>;
+          })}
           <div className="team-heading-row"><button type="button" className="team-folder new-team-option" onClick={onCreateTeam}><Icon name="Plus" className="sidebar-icon" /><span>New team</span></button></div>
         </nav>
       </aside>
       <Inbox
         account={account}
-        teams={[merchant]}
+        teams={teams}
         notifications={(activity.data?.items || []).map(
           notificationFromActivity,
         )}
@@ -791,7 +812,7 @@ function MerchantWorkspace({ api, auth, session, onCreateTeam }) {
           user={session.user}
           merchant={merchant}
           scope={settings}
-          onSaved={setMerchantOverride}
+          onSaved={updated => { setMerchantOverride(updated); onTeamUpdated(updated); }}
           onClose={() => {
             setSettings(null);
             if (window.location.pathname === '/settings') go('overview');
