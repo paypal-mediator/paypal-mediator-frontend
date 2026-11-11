@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test test/*.test.js",
-    "start": "vite preview --host 0.0.0.0 --port 3000",
+    "start": "serve -s dist -l tcp://0.0.0.0:${PORT:-3000}",
     "lint": "eslint src test *.mjs",
     "typecheck": "tsc --noEmit"
   },
@@ -16,18 +16,19 @@
     "@supabase/supabase-js": "^2.119.0",
     "lucide-react": "^1.71.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "serve": "^14.2.7"
   },
   "devDependencies": {
-    "vite": "^6.0.0",
-    "eslint": "^9.39.1",
     "@eslint/js": "^9.39.1",
-    "globals": "^16.0.0",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "typescript": "5.9.3",
+    "@types/node": "^24.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/node": "^24.0.0"
+    "eslint": "^9.39.1",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^16.0.0",
+    "typescript": "5.9.3",
+    "vite": "^6.0.0"
   }
 }

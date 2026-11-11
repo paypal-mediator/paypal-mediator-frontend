@@ -31,6 +31,13 @@ Restart the dev server after changing environment variables. Existing `NEXT_PUBL
 
 ## Routing and deployment
 
+For the Render Web Service, use `npm ci && npm run build` as the build command
+and `npm start` as the start command. The production static server listens on
+Render's `PORT` (3000 locally) and serves `index.html` for client-side routes.
+Set `VITE_DATA_MODE=live`, `VITE_API_URL=https://paypal-mediator-backend.onrender.com/api`,
+`VITE_SUPABASE_URL`, and `VITE_SUPABASE_PUBLISHABLE_KEY` before building.
+Set the backend's `CORS_ORIGIN` to include `https://paypal-mediator-frontend.onrender.com`.
+
 Connected screens have stable URLs: `/transactions`, `/transactions/:id`, `/transactions/:id/evidence`, `/disputes`, `/disputes/:id`, `/disputes/:id/evidence/:transactionId`, `/activity`, and `/settings`. Reloads and browser back/forward restore the screen. Legacy `/login?callbackUrl=/transactions` links return to the requested screen after sign-in; external return destinations are ignored.
 
 Deploy this standalone repository with the Vite preset and repository root as the root directory. `vercel.json` uses `npm ci`, `npm run build`, the `dist` output directory, and SPA rewrites for direct screen URLs. No monorepo workspace filter is needed.
