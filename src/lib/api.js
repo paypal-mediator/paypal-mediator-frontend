@@ -1,12 +1,12 @@
 // All private operations go through the authorized backend, never Supabase tables.
-export function createApi({ baseUrl, getAccessToken }) {
+export function createApi({ baseUrl, getAccessToken, merchantId }) {
   const root = baseUrl.replace(/\/$/, '');
   async function request(path, { responseType, ...options } = {}) {
     const token = await getAccessToken();
     if (!token) throw Object.assign(new Error('Sign in to continue.'), { status: 401 });
     let response;
     try {
-      response = await fetch(`${root}${path}`, { ...options, headers: { Authorization: `Bearer ${token}`, ...(options.body ? { 'Content-Type': 'application/json' } : {}) } });
+      response = await fetch(`${root}${path}`, { ...options, headers: { Authorization: `Bearer ${token}`, ...(merchantId ? { 'X-Merchant-Id': merchantId } : {}), ...(options.body ? { 'Content-Type': 'application/json' } : {}) } });
     } catch (cause) {
       if (cause.name === 'AbortError') throw cause;
       throw Object.assign(new Error('Could not reach the server. Check your connection and try again.'), { code: 'NETWORK_ERROR', cause });
@@ -26,6 +26,7 @@ export function createApi({ baseUrl, getAccessToken }) {
   const investigationsPath = transactionId => `/transactions/${id(transactionId)}/investigations`;
   const verificationsPath = (transactionId, investigationId) => `${investigationsPath(transactionId)}/${id(investigationId)}/verifications`;
   return {
+    forMerchant: selected => createApi({ baseUrl, getAccessToken, merchantId: selected }),
     merchant: signal => get('/merchants/me', signal),
     merchants: signal => get('/merchants', signal),
     createMerchant: body => post('/merchants', body),

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRemote } from './lib/useRemote';
 import { routeFromLocation, routePath } from './lib/routes';
 import { notificationFromActivity } from './lib/live';
@@ -307,16 +307,20 @@ function Overview({ api, merchant, onPage }) {
 export default function ConnectedApp({ api, auth, session }) {
   const teams = useRemote((signal) => api.merchants(signal), [api]);
   const [teamDialog, setTeamDialog] = useState(null);
+  const teamSelectionKey = `account:${session.user.id}:active-merchant`;
+  const [selectedTeamId, setSelectedTeamId] = useState(() => { try { return localStorage.getItem(teamSelectionKey); } catch { return null; } });
+  const selected = teams.data?.items.find(team => team.id === selectedTeamId) || teams.data?.items[0];
+  const teamApi = useMemo(() => selected ? api.forMerchant(selected.id) : api, [api, selected?.id]);
   return (
     <>
     <RemoteState resource={teams}>
       {(data) => data.items.length === 0 ? (
         <EmptyAccountDashboard api={api} auth={auth} session={session} onCreateTeam={() => setTeamDialog('create')} onJoinTeam={() => setTeamDialog('join')} />
       ) : (
-        <MerchantWorkspace api={api} auth={auth} session={session} onCreateTeam={() => setTeamDialog('create')} />
+        <MerchantWorkspace key={selected.id} api={teamApi} auth={auth} session={session} onCreateTeam={() => setTeamDialog('create')} />
       )}
     </RemoteState>
-    {teamDialog === 'create' && <CreateMerchantDialog account={{ displayName: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || '', email: session.user.email || '' }} onClose={() => setTeamDialog(null)} onCreate={async details => { await api.createMerchant({ displayName: details.displayName }); setTeamDialog(null); teams.reload(); }} />}
+    {teamDialog === 'create' && <CreateMerchantDialog account={{ displayName: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || '', email: session.user.email || '' }} onClose={() => setTeamDialog(null)} onCreate={async details => { const team = await api.createMerchant({ displayName: details.displayName }); setSelectedTeamId(team.id); try { localStorage.setItem(teamSelectionKey, team.id); } catch { /* Team selection also stays in memory. */ } setTeamDialog(null); teams.reload(); }} />}
     {teamDialog === 'join' && <TeamAccessDialog mode="join" api={api} onClose={() => setTeamDialog(null)} onComplete={() => { setTeamDialog(null); teams.reload(); }} />}
     </>
   );

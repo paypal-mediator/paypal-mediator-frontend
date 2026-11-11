@@ -35,6 +35,22 @@ test('submission and AI writes retain caller idempotency keys and send exact pub
     for (const call of calls) assert.equal(call.method, 'POST');
   });
 });
+test('new team creation remains account-scoped and workspace requests use the selected team', async () => {
+  await intercept(async (api, calls) => {
+    await api.createMerchant({ displayName: 'MOCK Team' });
+    const scoped = api.forMerchant('00000000-0000-4000-8000-000000000001');
+    await scoped.merchant();
+    await scoped.transactions();
+    await api.merchants();
+    assert.equal(calls[0].url, 'https://api.test/api/merchants');
+    assert.equal(calls[0].method, 'POST');
+    assert.deepEqual(JSON.parse(calls[0].body), { displayName: 'MOCK Team' });
+    assert.equal(calls[0].headers['X-Merchant-Id'], undefined);
+    assert.equal(calls[1].headers['X-Merchant-Id'], '00000000-0000-4000-8000-000000000001');
+    assert.equal(calls[2].headers['X-Merchant-Id'], calls[1].headers['X-Merchant-Id']);
+    assert.equal(calls[3].headers['X-Merchant-Id'], undefined);
+  });
+});
 test('API accepts empty successes, rejects invalid JSON, and sanitizes non-JSON errors', async () => {
   await intercept(async api => assert.equal(await api.checkPayPal(), null), () => new Response(null, { status: 204 }));
   await intercept(async api => assert.rejects(api.merchant(), error => error.code === 'INVALID_RESPONSE'), () => new Response('<html>proxy response</html>'));
