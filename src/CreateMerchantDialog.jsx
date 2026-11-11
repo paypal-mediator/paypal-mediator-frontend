@@ -23,6 +23,7 @@ export default function CreateMerchantDialog({ account, onCreate, onClose }) {
   const [paypal, setPaypal] = useState(false);
   const [authorizing, setAuthorizing] = useState(false);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
   useEffect(() => {
     const previous = document.activeElement;
     dialog.current.showModal();
@@ -33,7 +34,7 @@ export default function CreateMerchantDialog({ account, onCreate, onClose }) {
   }, []);
   useEffect(() => { if (step > 0) dialog.current.querySelector('.setup-step-heading')?.focus(); }, [step]);
   const move = next => { setStep(next); setError(''); setAuthorizing(false); };
-  const submit = event => {
+  const submit = async event => {
     event.preventDefault(); setError('');
     if (step === 0 && Object.values(details).some(value => !value.trim())) return setError('Complete all business information fields.');
     if (step === 1 && ['street', 'city', 'region', 'postalCode', 'country'].some(key => !address[key].trim())) return setError('Complete your business address.');
@@ -52,8 +53,10 @@ export default function CreateMerchantDialog({ account, onCreate, onClose }) {
     const digits = card.number.replace(/\s/g, '');
     const payment = { brand: digits.startsWith('4') ? 'Visa' : digits.startsWith('5') ? 'Mastercard' : 'Card', last4: digits.slice(-4), status: 'PREVIEW' };
     const integration = { provider: 'PAYPAL', environment: 'sandbox', credentialsConfigured: paypal, webhookConfigured: paypal, connectionStatus: paypal ? 'CONNECTED' : 'NOT_CONFIGURED', disputesReadStatus: paypal ? 'GRANTED' : 'NOT_CHECKED', lastCheckedAt: paypal ? new Date().toISOString() : null, source: 'DEMO' };
-    try { onCreate({ ...Object.fromEntries(Object.entries(details).map(([key, value]) => [key, value.trim()])), address: Object.fromEntries(Object.entries(address).map(([key, value]) => [key, value.trim()])), payment, integration, subscription: { planId: selectedPlan.id, planName: selectedPlan.name, price: selectedPlan.price } }); }
+    setSaving(true);
+    try { await onCreate({ ...Object.fromEntries(Object.entries(details).map(([key, value]) => [key, value.trim()])), address: Object.fromEntries(Object.entries(address).map(([key, value]) => [key, value.trim()])), payment, integration, subscription: { planId: selectedPlan.id, planName: selectedPlan.name, price: selectedPlan.price } }); }
     catch (failure) { setError(failure.message || 'Could not create the team. Please try again.'); }
+    finally { setSaving(false); }
   };
   const editDetails = (key, value) => setDetails(current => ({ ...current, [key]: value }));
   return <dialog className="settings-dialog merchant-create-dialog" ref={dialog} aria-label="Create a team" onCancel={event => { event.preventDefault(); onClose(); }} onClick={event => { if (event.target !== event.currentTarget) return; const rect = event.currentTarget.getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) onClose(); }}>
@@ -73,7 +76,7 @@ export default function CreateMerchantDialog({ account, onCreate, onClose }) {
           {step === 3 && <><div className="settings-info-row"><span><strong>PayPal</strong><small>Sync transactions, disputes, and evidence for this business.</small></span><button type="button" className="button secondary" onClick={() => { if (paypal) setPaypal(false); else setAuthorizing(true); }}>{paypal ? 'Disconnect' : 'Connect PayPal'}</button></div>{paypal && <p role="status">PayPal connected</p>}{authorizing && <div className="settings-action-panel"><h3>Connect your PayPal account</h3><p>Allow this team to read transactions and disputes and receive account updates.</p><div className="button-row"><button type="button" className="button primary" onClick={() => { setPaypal(true); setAuthorizing(false); }}>Authorize connection</button><button type="button" className="button secondary" onClick={() => setAuthorizing(false)}>Cancel connection</button></div></div>}<small className="setup-preview-note">You can also connect PayPal later from Merchant settings → Integrations.</small></>}
           {step === 4 && <><dl className="merchant-create-summary">{[['Merchant name', details.displayName], ['Contact', `${details.contactName} · ${details.email}`], ['Business phone', details.phone], ['Business address', [address.street, address.unit, address.city, address.region, address.postalCode, address.country].filter(Boolean).join(', ')], ['Time zone', details.timezone.replaceAll('_', ' ')], ['Subscription', selectedPlan?.name || '—'], ['Payment method', `Card ending in ${card.number.replace(/\s/g, '').slice(-4)}`], ['PayPal', paypal ? 'Connected' : 'Connect later']].map(([title, value]) => <div key={title}><dt>{title}</dt><dd>{value}</dd></div>)}</dl><div className="settings-action-panel"><h3>Your team</h3><p>{account.displayName} · {account.email}</p><small>You’ll be the admin. Invite members from Merchant settings → Teams.</small></div></>}
           {error && <p role="alert">{error}</p>}
-          <div className="button-row merchant-create-actions"><button type="submit" className="button primary" disabled={step === 2 && !selectedPlan}>{step < 4 ? 'Continue' : 'Create team'}</button><button type="button" className="button secondary" onClick={step === 0 ? onClose : () => move(step - 1)}>{step === 0 ? 'Cancel' : 'Back'}</button></div>
+          <div className="button-row merchant-create-actions"><button type="submit" className="button primary" disabled={saving || (step === 2 && !selectedPlan)}>{saving ? 'Creating…' : step < 4 ? 'Continue' : 'Create team'}</button><button type="button" className="button secondary" disabled={saving} onClick={step === 0 ? onClose : () => move(step - 1)}>{step === 0 ? 'Cancel' : 'Back'}</button></div>
         </form>
       </div></section>
     </div>

@@ -17,6 +17,7 @@ import Icon from './Icon';
 import Badge from './Badge';
 import EmptyAccountDashboard from './EmptyAccountDashboard';
 import TeamAccessDialog from './TeamAccessDialog';
+import CreateMerchantDialog from './CreateMerchantDialog';
 import {
   date,
   label,
@@ -315,7 +316,8 @@ export default function ConnectedApp({ api, auth, session }) {
         <MerchantWorkspace api={api} auth={auth} session={session} onCreateTeam={() => setTeamDialog('create')} />
       )}
     </RemoteState>
-    {teamDialog && <TeamAccessDialog key={teamDialog} mode={teamDialog} api={api} onClose={() => setTeamDialog(null)} onComplete={() => { setTeamDialog(null); teams.reload(); }} />}
+    {teamDialog === 'create' && <CreateMerchantDialog account={{ displayName: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || '', email: session.user.email || '' }} onClose={() => setTeamDialog(null)} onCreate={async details => { await api.createMerchant({ displayName: details.displayName }); setTeamDialog(null); teams.reload(); }} />}
+    {teamDialog === 'join' && <TeamAccessDialog mode="join" api={api} onClose={() => setTeamDialog(null)} onComplete={() => { setTeamDialog(null); teams.reload(); }} />}
     </>
   );
 }
