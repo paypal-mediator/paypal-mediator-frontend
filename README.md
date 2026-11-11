@@ -26,6 +26,11 @@ rows visible; successful writes invalidate cached reads. Extra pages, filters, a
 unvisited detail records load on demand and are reused on return. Failed sections
 keep their own retry state without blocking the other tables.
 
+On refresh, one loading screen covers session restoration, app code, account teams,
+and the selected workspace preload. The workspace mounts with those results rather
+than restarting each read. The URL stays on the requested screen; startup failures
+stop at an error with an explicit retry instead of cycling through loading screens.
+
 The sidebar lists all active teams. Creating another team adds it to that list
 without replacing the current workspace or navigating away. The wizard displays
 creation progress and a confirmation; opening the new team is an explicit action.

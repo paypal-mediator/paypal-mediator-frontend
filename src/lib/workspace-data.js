@@ -4,6 +4,13 @@ export const activityKey = (cursor = null, filter = 'All activity', transactionI
 export const transactionKey = id => `transaction:${id}`;
 export const evidenceKey = id => `evidence:${id}`;
 export const disputeKey = id => `dispute:${id}`;
+export function workspacePrepared(api, route) {
+  const keys = ['merchant', transactionListKey(), disputeListKey(), activityKey(), 'overview', 'settings:integrations', 'settings:billing'];
+  if (route.page === 'details') keys.push(transactionKey(route.id));
+  if (route.page === 'evidence') keys.push(evidenceKey(route.id));
+  if (route.page === 'dispute-details') keys.push(disputeKey(route.id));
+  return keys.every(key => !api.resources.snapshot(key).loading);
+}
 
 export async function loadIntegrations(api, signal, paypal) {
   const integration = paypal || await api.integrations(signal);

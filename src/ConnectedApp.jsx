@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRemote } from './lib/useRemote';
-import { activityKey, preloadWorkspace, transactionKey, transactionListKey } from './lib/workspace-data';
+import { activityKey, preloadWorkspace, transactionKey, transactionListKey, workspacePrepared } from './lib/workspace-data';
+import WorkspaceLoading from './WorkspaceLoading';
 import { routeFromLocation, routePath } from './lib/routes';
 import { mergeTeamMemberships } from './lib/team';
 import { notificationFromActivity } from './lib/live';
@@ -309,15 +310,15 @@ function Overview({ api, merchant, onPage }) {
     </RemoteState>
   );
 }
-export default function ConnectedApp({ api, auth, session }) {
-  const teams = useRemote((signal) => api.merchants(signal), [api]);
+export default function ConnectedApp({ api, auth, session, initialTeams, initialSelectedTeamId, initialTeamApi }) {
+  const teams = useRemote((signal) => api.merchants(signal), [api], { initialData: initialTeams });
   const [teamDialog, setTeamDialog] = useState(null);
   const [teamUpdates, setTeamUpdates] = useState([]);
   const teamSelectionKey = `account:${session.user.id}:active-merchant`;
-  const [selectedTeamId, setSelectedTeamId] = useState(() => { try { return localStorage.getItem(teamSelectionKey); } catch { return null; } });
+  const [selectedTeamId, setSelectedTeamId] = useState(() => { if (initialSelectedTeamId) return initialSelectedTeamId; try { return localStorage.getItem(teamSelectionKey); } catch { return null; } });
   const memberships = useMemo(() => mergeTeamMemberships(teams.data?.items || [], teamUpdates), [teams.data, teamUpdates]);
   const selected = memberships.find(team => team.id === selectedTeamId) || teams.data?.items[0];
-  const scopedApis = useRef({ root: api, teams: new Map() });
+  const scopedApis = useRef({ root: api, teams: new Map(initialSelectedTeamId && initialTeamApi ? [[initialSelectedTeamId, initialTeamApi]] : []) });
   const teamApi = useMemo(() => {
     if (!selected) return api;
     if (scopedApis.current.root !== api) scopedApis.current = { root: api, teams: new Map() };
@@ -347,8 +348,9 @@ export default function ConnectedApp({ api, auth, session }) {
 }
 
 function PreparedMerchantWorkspace(props) {
-  const ready = useRemote(() => preloadWorkspace(props.api, routeFromLocation(window.location)), [props.api]);
-  if (ready.loading) return <div className="signed-out" role="status">Loading workspace…</div>;
+  const route = routeFromLocation(window.location);
+  const ready = useRemote(() => preloadWorkspace(props.api, route), [props.api], { initialData: workspacePrepared(props.api, route) ? true : undefined });
+  if (ready.loading) return <WorkspaceLoading />;
   return <MerchantWorkspace {...props} />;
 }
 
@@ -516,7 +518,8 @@ function MerchantWorkspace({ api, auth, session, teams, onSelectTeam, onTeamUpda
     };
   }, [settings, inboxOpen, accountOpen, route, sidebarClosed]);
   useEffect(() => {
-    window.history.replaceState(null, '', routePath(route));
+    const canonicalPath = routePath(route);
+    if (window.location.pathname !== canonicalPath) window.history.replaceState(null, '', canonicalPath);
     const restoreRoute = () => {
       const destination = routeFromLocation(window.location);
       setRoute(destination);
