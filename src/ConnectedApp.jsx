@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRemote } from './lib/useRemote';
+import { activityKey, preloadWorkspace, transactionKey, transactionListKey } from './lib/workspace-data';
 import { routeFromLocation, routePath } from './lib/routes';
 import { notificationFromActivity } from './lib/live';
 import RemoteState from './RemoteState';
@@ -56,6 +57,7 @@ function LiveTransactions({ api, onOpen }) {
         signal,
       ),
     [api, page, search],
+    { store: api.resources, key: transactionListKey(page, search) },
   );
   return (
     <>
@@ -189,6 +191,7 @@ function TransactionDetail({ api, id, admin, onEvidence, onTitle }) {
   const resource = useRemote(
     (signal) => api.transaction(id, signal),
     [api, id],
+    { store: api.resources, key: transactionKey(id) },
   );
   const [busy, setBusy] = useState(false),
     [error, setError] = useState('');
@@ -252,11 +255,12 @@ function Overview({ api, merchant, onPage }) {
   const resource = useRemote(
     (signal) =>
       Promise.all([
-        api.transactions({ pageSize: 1 }, signal),
-        api.disputes({ pageSize: 1 }, signal),
+        api.transactions({ page: 1, pageSize: 20 }, signal),
+        api.disputes({ page: 1, pageSize: 20 }, signal),
         api.integrations(signal),
       ]),
     [api],
+    { store: api.resources, key: 'overview' },
   );
   return (
     <RemoteState resource={resource}>
@@ -317,7 +321,7 @@ export default function ConnectedApp({ api, auth, session }) {
       {(data) => data.items.length === 0 ? (
         <EmptyAccountDashboard api={api} auth={auth} session={session} onCreateTeam={() => setTeamDialog('create')} onJoinTeam={() => setTeamDialog('join')} />
       ) : (
-        <MerchantWorkspace key={selected.id} api={teamApi} auth={auth} session={session} onCreateTeam={() => setTeamDialog('create')} />
+        <PreparedMerchantWorkspace key={selected.id} api={teamApi} auth={auth} session={session} onCreateTeam={() => setTeamDialog('create')} />
       )}
     </RemoteState>
     {teamDialog === 'create' && <CreateMerchantDialog account={{ displayName: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || '', email: session.user.email || '' }} onClose={() => setTeamDialog(null)} onCreate={async details => { const team = await api.createMerchant({ displayName: details.displayName }); setSelectedTeamId(team.id); try { localStorage.setItem(teamSelectionKey, team.id); } catch { /* Team selection also stays in memory. */ } setTeamDialog(null); teams.reload(); }} />}
@@ -326,11 +330,18 @@ export default function ConnectedApp({ api, auth, session }) {
   );
 }
 
+function PreparedMerchantWorkspace(props) {
+  const ready = useRemote(() => preloadWorkspace(props.api, routeFromLocation(window.location)), [props.api]);
+  if (ready.loading) return <div className="signed-out" role="status">Loading workspace…</div>;
+  return <MerchantWorkspace {...props} />;
+}
+
 function MerchantWorkspace({ api, auth, session, onCreateTeam }) {
-  const core = useRemote((signal) => api.merchant(signal), [api]);
+  const core = useRemote((signal) => api.merchant(signal), [api], { store: api.resources, key: 'merchant' });
   const activity = useRemote(
     (signal) => api.activity({ limit: 30 }, signal),
     [api],
+    { store: api.resources, key: activityKey() },
   );
   const [merchantOverride, setMerchantOverride] = useState(null);
   const merchant = merchantOverride || core.data;

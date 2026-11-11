@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRemote } from './lib/useRemote';
+import { disputeKey, disputeListKey, loadDispute } from './lib/workspace-data';
 import { canUseRun, evidenceUploadBody } from './lib/live';
 import RemoteState from './RemoteState';
 import Badge from './Badge';
@@ -9,22 +10,14 @@ import { date, label, money } from './lib/format';
 
 export function LiveDisputeList({ api, onOpen }) {
   const [page, setPage] = useState(1);
-  const resource = useRemote(signal => api.disputes({ page, pageSize: 20 }, signal), [api, page]);
+  const resource = useRemote(signal => api.disputes({ page, pageSize: 20 }, signal), [api, page], { store: api.resources, key: disputeListKey(page) });
   return <RemoteState resource={resource}>{data => <><section className="card dispute-cases-card"><div className="table-wrap"><table className="transactions-table disputes-table" aria-label="Dispute cases"><thead><tr>{['Case', 'Amount', 'Status'].map(title => <th scope="col" key={title}>{title}</th>)}</tr></thead><tbody>{data.items.map(item => <tr key={item.id} tabIndex={0} onClick={() => onOpen(item.id, item.paypalDisputeId)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpen(item.id, item.paypalDisputeId); } }}><td><div className="dispute-case-cell"><span className="dispute-case-icon"><Icon name="MessageSquareWarning" /></span><div><strong>{item.paypalDisputeId}</strong><small>{label(item.reasonCategory)}</small></div></div></td><td>{money(item.amount)}</td><td><Badge>{label(item.paypalStatus)}</Badge><small className="live-status-detail">{label(item.internalState)}</small></td></tr>)}</tbody></table>{!data.items.length && <div className="empty-state">No disputes yet.</div>}</div></section><Pagination page={page} pageSize={data.pageSize} total={data.total} onPage={setPage} /></>}</RemoteState>;
 }
 export function Pagination({ page, pageSize, total, onPage }) {
   return <div className="live-pagination"><small>{total} total · Page {page} of {Math.max(1, Math.ceil(total / pageSize))}</small><button className="button secondary" disabled={page <= 1} onClick={() => onPage(page - 1)}>Previous</button><button className="button secondary" disabled={page * pageSize >= total} onClick={() => onPage(page + 1)}>Next</button></div>;
 }
 export function LiveDisputeDetail({ api, disputeId, merchant, onTransaction, onEvidence, onTitle }) {
-  const resource = useRemote(async signal => {
-    const dispute = await api.dispute(disputeId, signal);
-    if (!dispute.link.transactionId) return { dispute, transaction: null, dossier: null, investigation: null, verification: null };
-    const transactionId = dispute.link.transactionId;
-    const [transaction, dossier, investigations] = await Promise.all([api.transaction(transactionId, signal), api.evidence(transactionId, signal), api.investigations(transactionId, signal)]);
-    const investigation = investigations.items[0] || null;
-    const verifications = investigation ? await api.verifications(transactionId, investigation.id, signal) : { items: [] };
-    return { dispute, transaction, dossier, investigation, verification: verifications.items[0] || null };
-  }, [api, disputeId]);
+  const resource = useRemote(signal => loadDispute(api, disputeId, signal), [api, disputeId], { store: api.resources, key: disputeKey(disputeId) });
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(null), [error, setError] = useState(''), [submission, setSubmission] = useState(null), [confirming, setConfirming] = useState(false), [consent, setConsent] = useState(false);
   const keys = useRef({});

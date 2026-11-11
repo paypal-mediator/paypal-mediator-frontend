@@ -1,6 +1,8 @@
 // All private operations go through the authorized backend, never Supabase tables.
+import { createResourceStore } from './resource-store.js';
 export function createApi({ baseUrl, getAccessToken, merchantId }) {
   const root = baseUrl.replace(/\/$/, '');
+  const resources = createResourceStore();
   async function request(path, { responseType, ...options } = {}) {
     const token = await getAccessToken();
     if (!token) throw Object.assign(new Error('Sign in to continue.'), { status: 401 });
@@ -17,6 +19,7 @@ export function createApi({ baseUrl, getAccessToken, merchantId }) {
     try { body = raw ? JSON.parse(raw) : null; } catch { body = null; }
     if (!response.ok) throw Object.assign(new Error(body?.message || `Request failed (${response.status}).`), { status: response.status, code: body?.code, requestId: body?.requestId || response.headers.get('X-Request-Id') });
     if (raw && !body) throw Object.assign(new Error('The server returned an unexpected response.'), { code: 'INVALID_RESPONSE' });
+    if (options.method && options.method !== 'GET') resources.invalidate();
     return body;
   }
   const get = (path, signal) => request(path, { signal });
@@ -26,6 +29,7 @@ export function createApi({ baseUrl, getAccessToken, merchantId }) {
   const investigationsPath = transactionId => `/transactions/${id(transactionId)}/investigations`;
   const verificationsPath = (transactionId, investigationId) => `${investigationsPath(transactionId)}/${id(investigationId)}/verifications`;
   return {
+    resources,
     forMerchant: selected => createApi({ baseUrl, getAccessToken, merchantId: selected }),
     merchant: signal => get('/merchants/me', signal),
     merchants: signal => get('/merchants', signal),

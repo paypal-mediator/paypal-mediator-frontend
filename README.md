@@ -19,6 +19,13 @@ Copy `.env.example` to `.env.local`, set the Supabase project URL and publishabl
 
 Connected mode uses Supabase sessions and the authorized backend for merchant settings, PayPal status checks, paginated transactions and disputes, evidence uploads and downloads, investigation and verification runs, activity, and billing records. Uploads accept PDF, PNG, and JPEG files up to 512 KiB. Readiness filters apply to the current transaction page. The backend resolves the merchant context, so connected mode displays the merchant returned by `GET /merchants/me`.
 
+Opening a team preloads its profile, first transaction/dispute pages, latest activity,
+integrations, and billing before showing the workspace. Navigation reuses an in-memory
+cache scoped to that team and signed-in session. Background refreshes keep existing
+rows visible; successful writes invalidate cached reads. Extra pages, filters, and
+unvisited detail records load on demand and are reused on return. Failed sections
+keep their own retry state without blocking the other tables.
+
 Dispute submission requires explicit approval and uses the backend's verified evidence. Edits to the displayed draft stay in the field. Billing creates subscription records. Card processing and buyer chat still need backend support. Team creation and member invitation APIs exist in the production backend but are not connected to these screens. ERP credential entry stays out of connected mode while credential verification and encrypted storage are unfinished.
 
 Live mode is the default, matching the production frontend. Without Supabase configuration, the app displays connection setup. For the local design workspace without backend credentials, create `.env.local` containing:

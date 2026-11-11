@@ -1,10 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+const emptySnapshot = { data: null, loading: true, error: null };
 // Each load owns a generation and an AbortSignal; late responses never replace new routes.
-export function useRemote(loader, deps = []) {
+export function useRemote(loader, deps = [], { store, key } = {}) {
   const [state, setState] = useState({ data: null, loading: true, error: null });
   const [version, setVersion] = useState(0);
   const generation = useRef(0);
+  const currentLoader = useRef(loader);
+  currentLoader.current = loader;
+  const subscribe = useCallback(listener => store ? store.subscribe(key, listener) : () => {}, [store, key]);
+  const getSnapshot = useCallback(() => store ? store.snapshot(key) : emptySnapshot, [store, key]);
+  const cached = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   useEffect(() => {
+    if (store) { store.load(key, signal => currentLoader.current(signal)).catch(() => {}); return; }
     const current = ++generation.current;
     const controller = new AbortController();
     setState({ data: null, loading: true, error: null });
@@ -14,7 +21,10 @@ export function useRemote(loader, deps = []) {
       if (!controller.signal.aborted && generation.current === current) setState({ data: null, loading: false, error });
     });
     return () => controller.abort();
-  }, [...deps, version]);
-  const reload = useCallback(() => setVersion(value => value + 1), []);
-  return { ...state, reload };
+  }, [...deps, version, store, key]);
+  const reload = useCallback(() => {
+    if (store) return store.load(key, signal => currentLoader.current(signal), { force: true }).catch(() => {});
+    setVersion(value => value + 1);
+  }, [store, key]);
+  return { ...(store ? cached : state), reload };
 }

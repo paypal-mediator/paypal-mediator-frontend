@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRemote } from './lib/useRemote';
+import { loadBilling, loadIntegrations } from './lib/workspace-data';
 import RemoteState from './RemoteState';
 import SidebarIcon from './SidebarIcon';
 import Icon from './Icon';
@@ -20,11 +21,7 @@ function Policies({ api, merchant, onSaved }) {
   return <><div className="settings-section-heading"><h2>Policies</h2><p>Control investigation and submission permissions.</p></div><form onSubmit={async event => { event.preventDefault(); setBusy(true); setMessage(''); try { const updated = await api.updateMerchant(policy); onSaved(updated); setMessage('Policies updated.'); } catch (error) { setMessage(error.message); } finally { setBusy(false); } }}>{[['allowInvestigations', 'Allow investigations', 'Permit the AI to review evidence when you start an investigation.'], ['allowSubmissions', 'Allow submissions', 'Permit verified evidence to be sent to PayPal after explicit approval.']].map(([key, title, description]) => <label className="settings-toggle" key={key}><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" role="switch" checked={policy[key]} disabled={!admin || busy} onChange={event => setPolicy({ ...policy, [key]: event.target.checked })} /></label>)}<label className="settings-toggle"><span><strong>Merchant approval required</strong><small>Every submission requires human approval.</small></span><input type="checkbox" checked disabled /></label>{admin && <button className="button primary settings-save" disabled={busy}>{busy ? 'Saving…' : 'Save policies'}</button>}<p role="status">{message}</p></form></>;
 }
 function Integrations({ api, admin }) {
-  const resource = useRemote(async signal => {
-    const paypal = await api.integrations(signal);
-    const [catalog, connections] = await Promise.allSettled([api.erpCatalog(signal), api.erpConnections(signal)]);
-    return { paypal: paypal.paypal, catalog: catalog.status === 'fulfilled' ? catalog.value.items : [], connections: connections.status === 'fulfilled' ? connections.value.items : [], erpError: catalog.status === 'rejected' ? catalog.reason.message : connections.status === 'rejected' ? connections.reason.message : null };
-  }, [api]);
+  const resource = useRemote(signal => loadIntegrations(api, signal), [api], { store: api.resources, key: 'settings:integrations' });
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState('');
   const action = async task => { setBusy(true); setError(''); setNotice(''); try { await task(); resource.reload(); } catch (failure) { setError(failure.message); } finally { setBusy(false); } };
   return <><div className="settings-section-heading"><h2>Integrations</h2><p>PayPal and your connected business systems.</p></div>{error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}<RemoteState resource={resource}>{data => <>
@@ -34,7 +31,7 @@ function Integrations({ api, admin }) {
   </>}</RemoteState></>;
 }
 function Billing({ api, admin }) {
-  const resource = useRemote(async signal => { const [plans, subscription] = await Promise.all([api.plans(signal), api.subscription(signal).catch(error => { if (error.status === 404) return null; throw error; })]); return { plans, subscription }; }, [api]);
+  const resource = useRemote(signal => loadBilling(api, signal), [api], { store: api.resources, key: 'settings:billing' });
   const [busy, setBusy] = useState(false), [error, setError] = useState('');
   return <><div className="settings-section-heading"><h2>Billing</h2><p>Your team subscription.</p></div>{error && <p role="alert">{error}</p>}<RemoteState resource={resource}>{data => <><p>{data.subscription ? `${data.subscription.plan.name} · ${label(data.subscription.status)} · Period ends ${date(data.subscription.currentPeriodEnd)}` : 'No active subscription.'}</p>{data.subscription && <p>Plan changes are not available for an active subscription.</p>}<div className="subscription-plan-grid">{data.plans.map(plan => <div className="subscription-plan" key={plan.id}><strong>{plan.name}</strong><span className="subscription-plan-price">{new Intl.NumberFormat(undefined, { style: 'currency', currency: plan.currency }).format(plan.priceCents / 100)}<small>/{plan.interval === 'MONTH' ? 'month' : 'year'}</small></span><span className="subscription-plan-description">{plan.maxTransactions ?? 'Unlimited'} transactions · {plan.maxDisputes ?? 'Unlimited'} disputes</span>{admin && <button className="button secondary" disabled={busy || !!data.subscription || plan.interval !== 'MONTH'} onClick={async () => { if (!window.confirm(`Create a subscription to ${plan.name} for this team?`)) return; setBusy(true); setError(''); try { await api.subscribe(plan.id); resource.reload(); } catch (failure) { setError(failure.message); } finally { setBusy(false); } }}>{data.subscription?.planId === plan.id ? 'Current plan' : plan.interval !== 'MONTH' ? 'Unavailable' : 'Choose plan'}</button>}</div>)}</div>{!data.plans.length && <p>No subscription plans are available.</p>}</>}</RemoteState></>;
 }
