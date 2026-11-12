@@ -19,7 +19,7 @@ export default function DashboardOverview({ api, onPage, onTransaction, onDisput
     const metrics = overviewMetrics(payments.items, cases.items);
     const max = Math.max(1, ...metrics.trend.map(item => item.count));
     const recentTransactions = [...payments.items].sort((a, b) => Date.parse(b.capturedAt) - Date.parse(a.capturedAt)).slice(0, 5);
-    return <div className="overview-dashboard"><header className="overview-heading"><div><h1>Overview</h1><p>Monitor payments, prioritize cases, and keep evidence ready.</p></div></header>
+    return <div className="overview-dashboard">
       <div className="overview-stats">
         <button className="card overview-stat" onClick={() => onPage('transactions')}><span><Icon name="Wallet" />Captured volume</span><strong>{amounts(metrics.volume)}</strong><small>{metrics.recentCount} payments · last 30 days<Icon name="ArrowUpRight" /></small></button>
         <button className="card overview-stat" onClick={() => onPage('disputes')}><span><Icon name="ShieldAlert" />Open disputes</span><strong>{metrics.active.length}</strong><small>{metrics.exposure.length ? `${amounts(metrics.exposure)} at issue` : 'No disputed amount'}<Icon name="ArrowUpRight" /></small></button>

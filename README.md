@@ -101,3 +101,6 @@ landscape viewports with the sidebar closed. Date/time use separate lines;
 column padding and badges adapt without removing any transaction field.
 Disputes use their own compact column proportions rather than inheriting the
 transaction table's minimum width.
+Overview is widget-only: no introductory heading/copy. The main cards flow in
+independent columns, with a single column on mobile, to avoid gaps caused by
+matching row heights.
