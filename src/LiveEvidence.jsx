@@ -4,6 +4,7 @@ import { evidenceKey } from './lib/workspace-data';
 import { evidenceUploadBody } from './lib/live';
 import { evidenceSnapshots } from './lib/evidence-snapshots';
 import RemoteState from './RemoteState';
+import ShipmentTrackingCard from './ShipmentTrackingCard';
 import EvidenceUpload from './EvidenceUpload';
 import EvidenceScreen from './EvidenceScreen';
 import { label } from './lib/format';
@@ -19,7 +20,7 @@ export default function LiveEvidence({ api, transactionId, admin }) {
     } catch (failure) { setError(failure.message); }
   };
   const upload = async file => { await api.uploadEvidence(transactionId, await evidenceUploadBody(file)); await resource.reload(); };
-  return <>{error && <p role="alert">{error}</p>}<RemoteState resource={resource}>{([transaction, dossier]) => <EvidenceScreen
+  return <><ShipmentTrackingCard key={transactionId} api={api} transactionId={transactionId} admin={admin} />{error && <p role="alert">{error}</p>}<RemoteState resource={resource}>{([transaction, dossier]) => <EvidenceScreen
     key={`${transactionId}:${dossier.revision}`} transaction={transaction} snapshots={evidenceSnapshots(transaction, dossier)}
     renderFiles={({ check, historical }) => <EvidenceUpload category={label(check.code)} readOnly={!admin || historical} accept="application/pdf,image/png,image/jpeg" onUpload={upload} />}
     renderRecord={({ records }) => records.map(item => <details className="live-original" key={item.id}><summary>Original record · Version {item.version}</summary><pre>{JSON.stringify(item.content, null, 2)}</pre></details>)}

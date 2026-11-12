@@ -1,0 +1,18 @@
+import React, { useEffect, useState } from 'react';
+
+export default function MediationSettings({ api, admin }) {
+  const [policy, setPolicy] = useState({ enabled: false, conciliationDays: 3, claimHours: 24, evidenceHours: 24, deadlineMarginHours: 24, returns: '', warranty: '', businessDeadlines: '', allowedSolutions: ['REPLACEMENT', 'RESHIPMENT'], automaticSubmission: true });
+  const [ready, setReady] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(''), [saved, setSaved] = useState(false);
+  useEffect(() => { const controller = new AbortController(); api.mediationPolicy(controller.signal).then(value => { if (value) setPolicy(value); setReady(true); }).catch(failure => { if (failure.name !== 'AbortError') setError(failure.message); }); return () => controller.abort(); }, [api]);
+  const update = (key, value) => { setPolicy(current => ({ ...current, [key]: value })); setSaved(false); };
+  return <><h2>Mediation policy</h2><p>Only existing PayPal disputes are processed. Your configured time windows are capped by the available PayPal deadline. Existing cases retain their policy snapshot. Enable investigations and submissions in Policies to run agents and send dossiers.</p>{error && <p role="alert">{error}</p>}<form onSubmit={async event => { event.preventDefault(); setBusy(true); setError(''); try { setPolicy(await api.saveMediationPolicy(policy)); setSaved(true); } catch (failure) { setError(failure.message); } finally { setBusy(false); } }}>
+    <fieldset disabled={!admin || !ready || busy}>
+      <label className="checkbox-label"><input type="checkbox" checked={policy.enabled} onChange={event => update('enabled', event.target.checked)} />Enable automatic mediation</label>
+      {[['conciliationDays', 'Conciliation days', 1, 20], ['claimHours', 'Hours to file a claim', 1, 168], ['evidenceHours', 'Evidence collection hours', 1, 168], ['deadlineMarginHours', 'Safety margin before PayPal deadline (hours)', 1, 72]].map(([key, title, min, max]) => <label key={key}>{title}<input type="number" required min={min} max={max} value={policy[key]} onChange={event => update(key, Number(event.target.value))} /></label>)}
+      {[['returns', 'Returns policy'], ['warranty', 'Warranty policy'], ['businessDeadlines', 'Business deadlines and conditions']].map(([key, title]) => <label key={key}>{title}<textarea required maxLength={2000} value={policy[key]} onChange={event => update(key, event.target.value)} rows={3} /></label>)}
+      <p>Permitted voluntary solutions</p>{[['REPLACEMENT', 'Replacement'], ['RESHIPMENT', 'Reshipment'], ['PARTIAL_DISCOUNT', 'Partial discount'], ['STORE_CREDIT', 'Store credit'], ['FULL_REFUND_RECOMMENDATION', 'Full refund recommendation']].map(([key, title]) => <label className="checkbox-label" key={key}><input type="checkbox" checked={policy.allowedSolutions.includes(key)} onChange={event => update('allowedSolutions', event.target.checked ? [...policy.allowedSolutions, key] : policy.allowedSolutions.filter(value => value !== key))} />{title}</label>)}
+      <label className="checkbox-label"><input type="checkbox" checked={policy.automaticSubmission} onChange={event => update('automaticSubmission', event.target.checked)} />Authorize automatic submission of independently verified mediation dossiers to PayPal. Difficult cases require specialist review.</label>
+      <p>No option executes refunds, holds or transfers.</p><button className="button primary" disabled={!policy.allowedSolutions.length}>{busy ? 'Saving…' : 'Save mediation policy'}</button>
+    </fieldset>{saved && <p role="status">Mediation policy saved.</p>}
+  </form></>;
+}

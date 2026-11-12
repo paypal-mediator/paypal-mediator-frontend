@@ -111,3 +111,13 @@ PayPal checks, and existing ERP disconnect actions live in a nested dialog.
 ERP credential setup remains incomplete in the backend, so the UI exposes its
 availability without collecting keys or manufacturing a successful connection.
 Evidence drop areas use content height, including in dispute upload cards.
+
+### Mediation integration
+
+The connected dispute screen now includes `MediationConversation`, backed by
+`/disputes/:id/mediation`. Messages are persisted by the backend and delivered
+through the existing PayPal dispute; buyers reply in PayPal. Delivery states
+remain visible, including queued and uncertain requests. Merchant settings →
+Mediation configures business policies, time windows and automatic submission.
+Existing design-only components remain local fixtures. See the backend's
+`docs/mediation.md` for activation, protocols and external limitations.
