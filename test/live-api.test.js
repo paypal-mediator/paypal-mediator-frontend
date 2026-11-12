@@ -113,3 +113,15 @@ test('shipment reads and resolution use the selected merchant backend without pr
     }
   });
 });
+
+
+test('Odoo credentials and management requests stay scoped to the selected team', async () => {
+  await intercept(async (api, calls) => {
+    const scoped = api.forMerchant('team-odoo');
+    await scoped.connectErp('odoo', 'MOCK-key', 'https://demo.odoo.com', 'demo');
+    await scoped.erpStatus('connection-1'); await scoped.syncErp('connection-1'); await scoped.disconnectErp('connection-1');
+    assert.deepEqual(JSON.parse(calls[0].body), { provider: 'odoo', apiKey: 'MOCK-key', baseUrl: 'https://demo.odoo.com', database: 'demo' });
+    assert.equal(calls[1].url, 'https://api.test/api/integrations/connection-1/status');
+    for (const call of calls) assert.equal(call.headers['X-Merchant-Id'], 'team-odoo');
+  });
+});

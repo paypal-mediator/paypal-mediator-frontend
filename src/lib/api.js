@@ -77,7 +77,8 @@ export function createApi({ baseUrl, getAccessToken, merchantId }) {
     subscribe: planId => post('/billing/subscription', { planId }),
     erpCatalog: signal => get('/integrations/catalog', signal),
     erpConnections: signal => get('/integrations', signal),
-    connectErp: (provider, apiKey, baseUrl) => post(`/integrations/${id(provider)}/connect-with-key`, { provider, apiKey, ...(baseUrl ? { baseUrl } : {}) }),
+    connectErp: (provider, apiKey, baseUrl, database) => post(`/integrations/${id(provider)}/connect-with-key`, { provider, apiKey, ...(baseUrl ? { baseUrl } : {}), ...(database ? { database } : {}) }),
+    erpStatus: (connectionId, signal) => get(`/integrations/${id(connectionId)}/status`, signal),
     syncErp: connectionId => post(`/integrations/${id(connectionId)}/sync`, { connectionId }),
     disconnectErp: connectionId => post(`/integrations/${id(connectionId)}/disconnect`),
   };
