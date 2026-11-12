@@ -37,6 +37,9 @@ without replacing the current workspace or navigating away. The wizard displays
 creation progress and a confirmation; opening the new team is an explicit action.
 For a first team, the account stays on the team chooser until the user opens it.
 Team selection is remembered per account, and each team's data cache stays separate.
+Team names only expand or collapse their own menu; other expanded menus stay open.
+Selecting a menu option opens that team's requested screen, without detouring through
+Overview. Expanded menus are remembered per account across navigation and refreshes.
 
 Dispute submission requires explicit approval and uses the backend's verified evidence. Edits to the displayed draft stay in the field. Billing creates subscription records. Card processing and buyer chat still need backend support. Team creation and member invitation APIs exist in the production backend but are not connected to these screens. ERP credential entry stays out of connected mode while credential verification and encrypted storage are unfinished.
 

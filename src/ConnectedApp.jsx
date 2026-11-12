@@ -317,6 +317,12 @@ export default function ConnectedApp({ api, auth, session, initialTeams, initial
   const [teamUpdates, setTeamUpdates] = useState([]);
   const teamSelectionKey = `account:${session.user.id}:active-merchant`;
   const [selectedTeamId, setSelectedTeamId] = useState(() => { if (initialSelectedTeamId) return initialSelectedTeamId; try { return localStorage.getItem(teamSelectionKey); } catch { return null; } });
+  const expansionKey = `account:${session.user.id}:expanded-teams`;
+  const [expandedTeamIds, setExpandedTeamIds] = useState(() => {
+    try { const saved = JSON.parse(localStorage.getItem(expansionKey)); if (Array.isArray(saved)) return saved.filter(id => typeof id === 'string'); } catch { /* Use the initial team. */ }
+    return [initialSelectedTeamId || initialTeams?.items[0]?.id].filter(Boolean);
+  });
+  useEffect(() => { try { localStorage.setItem(expansionKey, JSON.stringify(expandedTeamIds)); } catch { /* Expansion remains available without storage. */ } }, [expansionKey, expandedTeamIds]);
   const memberships = useMemo(() => mergeTeamMemberships(teams.data?.items || [], teamUpdates), [teams.data, teamUpdates]);
   const selected = memberships.find(team => team.id === selectedTeamId) || teams.data?.items[0];
   const scopedApis = useRef({ root: api, teams: new Map(initialTeamApis || (initialSelectedTeamId && initialTeamApi ? [[initialSelectedTeamId, initialTeamApi]] : [])) });
@@ -326,9 +332,18 @@ export default function ConnectedApp({ api, auth, session, initialTeams, initial
     if (!scopedApis.current.teams.has(selected.id)) scopedApis.current.teams.set(selected.id, api.forMerchant(selected.id));
     return scopedApis.current.teams.get(selected.id);
   }, [api, selected?.id]);
-  const selectTeam = (id, { settings = false } = {}) => {
+  const toggleTeam = (id, expanded) => {
     if (!memberships.some(team => team.id === id)) return;
-    window.history.pushState(null, '', settings ? '/settings' : '/');
+    setExpandedTeamIds(current => {
+      const open = expanded ?? !current.includes(id);
+      return open ? [...new Set([...current, id])] : current.filter(value => value !== id);
+    });
+  };
+  const selectTeam = (id, { settings = false, page = 'overview' } = {}) => {
+    if (!memberships.some(team => team.id === id)) return;
+    const path = settings ? '/settings' : routePath({ page });
+    if (window.location.pathname !== path) window.history.pushState(null, '', path);
+    toggleTeam(id, true);
     setSelectedTeamId(id);
     try { localStorage.setItem(teamSelectionKey, id); } catch { /* Selection remains available without storage. */ }
   };
@@ -339,7 +354,7 @@ export default function ConnectedApp({ api, auth, session, initialTeams, initial
       {() => !selected ? (
         <EmptyAccountDashboard api={api} auth={auth} session={session} teams={memberships} onSelectTeam={selectTeam} onCreateTeam={() => setTeamDialog('create')} onJoinTeam={() => setTeamDialog('join')} />
       ) : (
-        <PreparedMerchantWorkspace key={selected.id} api={teamApi} auth={auth} session={session} teams={memberships} onSelectTeam={selectTeam} onTeamUpdated={updateTeam} onCreateTeam={() => setTeamDialog('create')} />
+        <PreparedMerchantWorkspace key={selected.id} api={teamApi} auth={auth} session={session} teams={memberships} expandedTeamIds={expandedTeamIds} onToggleTeam={toggleTeam} onSelectTeam={selectTeam} onTeamUpdated={updateTeam} onCreateTeam={() => setTeamDialog('create')} />
       )}
     </RemoteState>
     {teamDialog === 'create' && <CreateMerchantDialog account={{ displayName: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || '', email: session.user.email || '' }} onClose={() => setTeamDialog(null)} onOpenTeam={team => { selectTeam(team.id); setTeamDialog(null); }} onCreate={async details => { const team = await api.createMerchant({ displayName: details.displayName }); updateTeam(team); return team; }} />}
@@ -355,7 +370,7 @@ function PreparedMerchantWorkspace(props) {
   return <MerchantWorkspace {...props} />;
 }
 
-function MerchantWorkspace({ api, auth, session, teams, onSelectTeam, onTeamUpdated, onCreateTeam }) {
+function MerchantWorkspace({ api, auth, session, teams, expandedTeamIds, onToggleTeam, onSelectTeam, onTeamUpdated, onCreateTeam }) {
   const core = useRemote((signal) => api.merchant(signal), [api], { store: api.resources, key: 'merchant' });
   const activity = useRemote(
     (signal) => api.activity({ limit: 30 }, signal),
@@ -368,7 +383,6 @@ function MerchantWorkspace({ api, auth, session, teams, onSelectTeam, onTeamUpda
     [settings, setSettings] = useState(route.settings || null),
     [inboxOpen, setInboxOpen] = useState(false),
     [accountOpen, setAccountOpen] = useState(false),
-    [expanded, setExpanded] = useState(true),
     [error, setError] = useState('');
   const prefKey = `account:${session.user.id}:sidebar-closed`;
   const [sidebarClosed, setSidebarClosed] = useState(() => {
@@ -615,6 +629,7 @@ function MerchantWorkspace({ api, auth, session, teams, onSelectTeam, onTeamUpda
         <nav className="team-sidebar" aria-label="Teams">
           {teams.map(team => {
             const active = team.id === merchant.id;
+            const expanded = expandedTeamIds.includes(team.id);
             const displayName = active ? merchant.displayName : team.displayName;
             return <div className="sidebar-team" key={team.id}>
             <div className="team-heading-row">
@@ -623,21 +638,20 @@ function MerchantWorkspace({ api, auth, session, teams, onSelectTeam, onTeamUpda
                 className={`team-folder ${active ? 'current' : ''}`}
                 title={displayName}
                 aria-label={displayName}
-                aria-controls={active ? 'connected-team-pages' : undefined}
-                aria-expanded={active && expanded}
-                onClick={() => active ? setExpanded((value) => !value) : onSelectTeam(team.id)}
+                aria-controls={`connected-team-pages-${team.id}`}
+                aria-expanded={expanded}
+                onClick={() => onToggleTeam(team.id)}
                 onKeyDown={(event) => {
                   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
                     event.preventDefault();
-                    if (active) setExpanded(event.key === 'ArrowRight');
-                    else if (event.key === 'ArrowRight') onSelectTeam(team.id);
+                    onToggleTeam(team.id, event.key === 'ArrowRight');
                   }
                 }}
               >
                 <SidebarIcon name="folder" />
                 <span>{displayName}</span>
                 <Icon
-                  name={active && expanded ? 'ChevronDown' : 'ChevronRight'}
+                  name={expanded ? 'ChevronDown' : 'ChevronRight'}
                   className="team-toggle-chevron"
                 />
               </button>
@@ -651,25 +665,25 @@ function MerchantWorkspace({ api, auth, session, teams, onSelectTeam, onTeamUpda
                 <Icon name="MoreHorizontal" />
               </button>
             </div>
-            {active && <div
+            <div
               className="team-folder-pages"
-              id="connected-team-pages"
+              id={`connected-team-pages-${team.id}`}
               hidden={!expanded}
             >
               {navigation.map(([id, title]) => (
                 <button
                   type="button"
                   key={id}
-                  className={`nav-item ${current === id ? 'active' : ''}`}
+                  className={`nav-item ${active && current === id ? 'active' : ''}`}
                   data-sidebar-tab
-                  aria-current={current === id ? 'page' : undefined}
-                  onClick={() => go(id)}
+                  aria-current={active && current === id ? 'page' : undefined}
+                  onClick={() => active ? go(id) : onSelectTeam(team.id, { page: id })}
                 >
                   <SidebarIcon name={id} />
                   {title}
                 </button>
               ))}
-            </div>}
+            </div>
           </div>;
           })}
           <div className="team-heading-row"><button type="button" className="team-folder new-team-option" onClick={onCreateTeam}><Icon name="Plus" className="sidebar-icon" /><span>New team</span></button></div>
