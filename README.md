@@ -95,3 +95,9 @@ response workload, document readiness, upcoming deadlines, payment activity
 (14 days), recent activity, and recent transactions from shared team caches.
 Money is summed with integer precision and kept separate by currency. Connection
 and integration status remain in settings and are absent from overview.
+
+Tablet tables: transaction columns fit 820/834px portrait and 1024/1194px
+landscape viewports with the sidebar closed. Date/time use separate lines;
+column padding and badges adapt without removing any transaction field.
+Disputes use their own compact column proportions rather than inheriting the
+transaction table's minimum width.

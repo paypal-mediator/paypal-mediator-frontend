@@ -142,7 +142,7 @@ function LiveTransactions({ api, onOpen }) {
                               </div>
                             </div>
                           </td>
-                          <td>{date(item.capturedAt)}</td>
+                          <td><time className="transaction-received" dateTime={item.capturedAt} title={date(item.capturedAt)}><span>{new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(new Date(item.capturedAt))}</span><small>{new Intl.DateTimeFormat(undefined, { timeStyle: 'short' }).format(new Date(item.capturedAt))}</small></time></td>
                           <td>{money(item.amount)}</td>
                           <td>
                             <Badge>{label(item.status)}</Badge>
@@ -156,9 +156,7 @@ function LiveTransactions({ api, onOpen }) {
                   </table>
                   {!items.length && (
                     <EmptyState>
-                      {filter === 'All transactions'
-                        ? 'No transactions found.'
-                        : 'No matching transactions on this page.'}
+                      {!data.items.length ? 'No transactions found.' : 'No matching transactions found.'}
                     </EmptyState>
                   )}
                 </div>
