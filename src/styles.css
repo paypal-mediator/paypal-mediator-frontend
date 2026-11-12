@@ -245,3 +245,5 @@ button.dispute-activity-item{width:100%;background:none;border:0;border-bottom:1
 /* Let each overview column flow independently instead of aligning row heights. */
 .overview-grid{display:block;column-count:2;column-gap:20px}.overview-grid>.card{display:inline-block;vertical-align:top;width:100%;break-inside:avoid;margin:0 0 20px}.overview-recent-transactions{grid-column:auto}
 @media(max-width:800px){.overview-grid{column-count:1}}
+.disputes-table .badge{width:220px;height:32px;max-width:100%;padding:4px 8px;white-space:normal}
+@media(max-width:560px){.disputes-table .badge{height:44px;padding:4px 6px}}
