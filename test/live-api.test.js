@@ -87,3 +87,20 @@ test('partial source orders preserve unknown values without crashing or inventin
   const transaction = { order: { externalId: 'ORDER-PARTIAL', items: [{ quantity: null }, { quantity: 2 }] } };
   assert.equal(transactionSubtitle(transaction), 'ORDER-PARTIAL');
 });
+
+test('shipment reads and resolution use the selected merchant backend without provider credentials', async () => {
+  await intercept(async (api, calls) => {
+    const scoped = api.forMerchant('00000000-0000-4000-8000-000000000001');
+    await scoped.shipmentTracking('tx/1');
+    await scoped.resolveShipmentTracking('tx/1', { trackingNumber: 'MOCKGUIDE123', carrierCode: 100003 });
+    assert.equal(calls[0].url, 'https://api.test/api/transactions/tx%2F1/shipment-tracking');
+    assert.equal(calls[0].method, undefined);
+    assert.equal(calls[1].url, 'https://api.test/api/transactions/tx%2F1/shipment-tracking/resolve');
+    assert.equal(calls[1].method, 'POST');
+    assert.deepEqual(JSON.parse(calls[1].body), { trackingNumber: 'MOCKGUIDE123', carrierCode: 100003 });
+    for (const call of calls) {
+      assert.equal(call.headers['X-Merchant-Id'], '00000000-0000-4000-8000-000000000001');
+      assert.equal(call.headers['17token'], undefined);
+    }
+  });
+});

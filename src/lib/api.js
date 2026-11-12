@@ -39,6 +39,8 @@ export function createApi({ baseUrl, getAccessToken, merchantId }) {
     integrations: signal => get('/settings/integrations', signal),
     transactions: ({ page = 1, pageSize = 20, paypalCaptureId } = {}, signal) => get(`/transactions?${query({ page, pageSize, paypalCaptureId }, ['page', 'pageSize', 'paypalCaptureId'])}`, signal),
     transaction: (transactionId, signal) => get(`/transactions/${id(transactionId)}`, signal),
+    shipmentTracking: (transactionId, signal) => get(`/transactions/${id(transactionId)}/shipment-tracking`, signal),
+    resolveShipmentTracking: (transactionId, body = {}) => post(`/transactions/${id(transactionId)}/shipment-tracking/resolve`, body),
     evidence: (transactionId, signal) => get(`/transactions/${id(transactionId)}/evidence`, signal),
     updateMerchant: body => request('/merchants/me/settings', { method: 'PATCH', body: JSON.stringify(body) }),
     checkPayPal: () => post('/settings/integrations/paypal/check'),
