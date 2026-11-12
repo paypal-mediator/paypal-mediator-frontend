@@ -50,7 +50,7 @@ export function createResourceStore({ staleTime = 30000, now = Date.now } = {}) 
         entry.controller?.abort();
         entry.promise = null;
         entry.loaded = false;
-        notify(entry, { data: null, loading: true, error: null });
+        notify(entry, { ...entry.snapshot, loading: entry.snapshot.data === null, error: null });
         if (entry.listeners.size && entry.loader) store.load(key, entry.loader).catch(() => {});
       }
     },

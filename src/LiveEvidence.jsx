@@ -8,7 +8,7 @@ import EvidenceUpload from './EvidenceUpload';
 import EvidenceScreen from './EvidenceScreen';
 import { label } from './lib/format';
 export default function LiveEvidence({ api, transactionId, admin }) {
-  const resource = useRemote(signal => Promise.all([api.transaction(transactionId, signal), api.evidence(transactionId, signal)]), [api, transactionId], { store: api.resources, key: evidenceKey(transactionId) });
+  const resource = useRemote(signal => Promise.all([api.resources.load(`transaction:${transactionId}`, signal => api.transaction(transactionId, signal)), api.evidence(transactionId, signal)]), [api, transactionId], { store: api.resources, key: evidenceKey(transactionId) });
   const [error, setError] = useState('');
   const download = async item => {
     setError('');

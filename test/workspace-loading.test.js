@@ -79,7 +79,8 @@ test('workspace preloads main tables and settings together without duplicate ove
     assert.equal(root.forMerchant('team-b').resources.snapshot('merchant').data, null);
     assert.equal(root.resources.snapshot('merchant').data, null);
     await api.updateMerchant({ displayName: 'Updated' });
-    assert.equal(api.resources.snapshot(transactionListKey()).data, null);
+    assert.deepEqual(api.resources.snapshot(transactionListKey()).data.items, []);
+    assert.equal(api.resources.snapshot(transactionListKey()).loading, false);
   } finally { globalThis.fetch = original; }
 });
 
@@ -95,4 +96,19 @@ test('a failed preload section does not prevent the other tables from becoming a
     assert.equal(api.resources.snapshot(transactionListKey()).error, null);
     assert.deepEqual(api.resources.snapshot(transactionListKey()).data.items, []);
   } finally { globalThis.fetch = original; }
+});
+
+test('writes retain visible records while the subscriber reloads', async () => {
+  const store = createResourceStore();
+  const pending = deferred();
+  await store.load('table', () => Promise.resolve(['visible']));
+  const unsubscribe = store.subscribe('table', () => {});
+  await store.load('table', () => pending.promise);
+  store.invalidate();
+  assert.deepEqual(store.snapshot('table').data, ['visible']);
+  assert.equal(store.snapshot('table').loading, false);
+  pending.resolve(['fresh']);
+  await store.load('table', () => pending.promise);
+  assert.deepEqual(store.snapshot('table').data, ['fresh']);
+  unsubscribe();
 });

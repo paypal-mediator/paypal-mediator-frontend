@@ -82,3 +82,10 @@ Older revisions are read-only. Manual refresh controls are removed; a browser
 reload fetches fresh workspace data. Dispute rows display one colored PayPal
 status pill. Activity entries and inbox notifications open the selected event's
 activity details, with transaction navigation available as an explicit action.
+
+Lists now collect every backend page before client-side searching/filtering;
+transactions, disputes, and activity have no pagination footer. Transaction rows
+prime their detail cache, likely evidence/cases warm in the background, and row
+hover/focus prefetches details. Writes retain existing data during revalidation;
+uncached reads use the full-screen workspace loader. Team options reuse the
+original popover, with persistent account-scoped pin/order and backend renaming.

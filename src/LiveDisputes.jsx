@@ -1,21 +1,19 @@
 import EmptyState from './EmptyState';
 import React, { useEffect, useRef, useState } from 'react';
 import { useRemote } from './lib/useRemote';
-import { disputeKey, disputeListKey, loadDispute } from './lib/workspace-data';
+import { disputeKey, disputeListKey, loadDispute, loadAllPages, prefetchDetails } from './lib/workspace-data';
 import { canUseRun, evidenceUploadBody } from './lib/live';
 import RemoteState from './RemoteState';
 import Badge from './Badge';
+import SegmentedFilters from './SegmentedFilters';
 import Icon from './Icon';
 import EvidenceUpload from './EvidenceUpload';
 import { date, label, money } from './lib/format';
 
 export function LiveDisputeList({ api, onOpen }) {
-  const [page, setPage] = useState(1);
-  const resource = useRemote(signal => api.disputes({ page, pageSize: 20 }, signal), [api, page], { store: api.resources, key: disputeListKey(page) });
-  return <RemoteState resource={resource}>{data => <><section className="card dispute-cases-card"><div className="table-wrap"><table className="transactions-table disputes-table" aria-label="Dispute cases"><thead><tr>{['Case', 'Amount', 'Status'].map(title => <th scope="col" key={title}>{title}</th>)}</tr></thead><tbody>{data.items.map(item => <tr key={item.id} tabIndex={0} onClick={() => onOpen(item.id, item.paypalDisputeId)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpen(item.id, item.paypalDisputeId); } }}><td><div className="dispute-case-cell"><span className="dispute-case-icon"><Icon name="MessageSquareWarning" /></span><div><strong>{item.paypalDisputeId}</strong><small>{label(item.reasonCategory)}</small></div></div></td><td>{money(item.amount)}</td><td><Badge>{label(item.paypalStatus)}</Badge></td></tr>)}</tbody></table>{!data.items.length && <EmptyState>No disputes found.</EmptyState>}</div></section><Pagination page={page} pageSize={data.pageSize} total={data.total} onPage={setPage} /></>}</RemoteState>;
-}
-export function Pagination({ page, pageSize, total, onPage }) {
-  return <div className="live-pagination"><small>{total} total · Page {page} of {Math.max(1, Math.ceil(total / pageSize))}</small><button className="button secondary" disabled={page <= 1} onClick={() => onPage(page - 1)}>Previous</button><button className="button secondary" disabled={page * pageSize >= total} onClick={() => onPage(page + 1)}>Next</button></div>;
+  const [query, setQuery] = useState(''), [filter, setFilter] = useState('All disputes');
+  const resource = useRemote(signal => loadAllPages((params, signal) => api.disputes(params, signal), signal), [api], { store: api.resources, key: disputeListKey() });
+  return <><div className="filters transaction-toolbar"><SegmentedFilters value={filter} onChange={setFilter} options={['All disputes', 'Needs response', 'Under review', 'Resolved']} label="Filter disputes" /><div className="search-field"><Icon name="Search" /><input className="search" type="search" aria-label="Search disputes" placeholder="Search disputes" value={query} onChange={event => setQuery(event.target.value)} /></div></div><RemoteState resource={resource}>{data => { const items = data.items.filter(item => (filter === 'All disputes' || (filter === 'Needs response' ? ['OPEN', 'WAITING_FOR_SELLER_RESPONSE'].includes(item.paypalStatus) : filter === 'Under review' ? item.paypalStatus === 'UNDER_REVIEW' : item.paypalStatus === 'RESOLVED')) && `${item.paypalDisputeId} ${label(item.reasonCategory)} ${label(item.paypalStatus)} ${item.amount?.value || ''}`.toLowerCase().includes(query.trim().toLowerCase())); return <><section className="card dispute-cases-card"><div className="table-wrap"><table className="transactions-table disputes-table" aria-label="Dispute cases"><thead><tr>{['Case', 'Amount', 'Status'].map(title => <th scope="col" key={title}>{title}</th>)}</tr></thead><tbody>{items.map(item => <tr key={item.id} tabIndex={0} onMouseEnter={() => prefetchDetails(api, 'dispute-details', item.id)} onFocus={() => prefetchDetails(api, 'dispute-details', item.id)} onClick={() => onOpen(item.id, item.paypalDisputeId)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpen(item.id, item.paypalDisputeId); } }}><td><div className="dispute-case-cell"><span className="dispute-case-icon"><Icon name="MessageSquareWarning" /></span><div><strong>{item.paypalDisputeId}</strong><small>{label(item.reasonCategory)}</small></div></div></td><td>{money(item.amount)}</td><td><Badge>{label(item.paypalStatus)}</Badge></td></tr>)}</tbody></table>{!items.length && <EmptyState>{data.items.length ? 'No matching disputes found.' : 'No disputes found.'}</EmptyState>}</div></section></>; }}</RemoteState></>;
 }
 export function LiveDisputeDetail({ api, disputeId, merchant, onTransaction, onEvidence, onTitle }) {
   const resource = useRemote(signal => loadDispute(api, disputeId, signal), [api, disputeId], { store: api.resources, key: disputeKey(disputeId) });

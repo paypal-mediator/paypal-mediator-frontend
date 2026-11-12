@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRemote } from './lib/useRemote';
-import { activityKey, preloadWorkspace, transactionKey, transactionListKey, workspacePrepared } from './lib/workspace-data';
+import { activityKey, loadActivity, loadTransactions, prefetchDetails, warmWorkspace, preloadWorkspace, transactionKey, transactionListKey, workspacePrepared } from './lib/workspace-data';
 import WorkspaceLoading from './WorkspaceLoading';
 import EmptyState from './EmptyState';
 import { routeFromLocation, routePath } from './lib/routes';
@@ -10,8 +10,10 @@ import RemoteState from './RemoteState';
 import LiveEvidence from './LiveEvidence';
 import LiveActivity from './LiveActivity';
 import ActivityDetails from './ActivityDetails';
+import TeamOptions from './TeamOptions';
+import RenameTeamDialog from './RenameTeamDialog';
 import LiveSettings from './LiveSettings';
-import { LiveDisputeList, LiveDisputeDetail, Pagination } from './LiveDisputes';
+import { LiveDisputeList, LiveDisputeDetail } from './LiveDisputes';
 import TransactionFilters from './TransactionFilters';
 import PurchaseSummary from './PurchaseSummary';
 import ProductThumbnail from './ProductThumbnail';
@@ -43,26 +45,8 @@ const rootPage = (route) =>
       ? 'transactions'
       : route.page;
 function LiveTransactions({ api, onOpen }) {
-  const [page, setPage] = useState(1),
-    [query, setQuery] = useState(''),
-    [search, setSearch] = useState(''),
-    [filter, setFilter] = useState('All transactions');
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearch(query.trim());
-      setPage(1);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [query]);
-  const resource = useRemote(
-    (signal) =>
-      api.transactions(
-        { page, pageSize: 20, ...(search ? { paypalCaptureId: search } : {}) },
-        signal,
-      ),
-    [api, page, search],
-    { store: api.resources, key: transactionListKey(page, search) },
-  );
+  const [query, setQuery] = useState(''), [filter, setFilter] = useState('All transactions');
+  const resource = useRemote(signal => loadTransactions(api, signal), [api], { store: api.resources, key: transactionListKey() });
   return (
     <>
       <div className="filters transaction-toolbar">
@@ -72,8 +56,8 @@ function LiveTransactions({ api, onOpen }) {
           <input
             type="search"
             className="search"
-            aria-label="Search by exact capture ID"
-            placeholder="Search capture ID"
+            aria-label="Search transactions"
+            placeholder="Search transactions"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -83,9 +67,7 @@ function LiveTransactions({ api, onOpen }) {
         {(data) => {
           const items = data.items.filter(
             (item) =>
-              filter === 'All transactions' ||
-              item.readiness.status ===
-                (filter === 'Incomplete' ? 'INCOMPLETE' : 'NEEDS_REVIEW'),
+              (filter === 'All transactions' || item.readiness.status === (filter === 'Incomplete' ? 'INCOMPLETE' : 'NEEDS_REVIEW')) && `${item.paypalCaptureId} ${item.merchantOrderReference || ''} ${item.invoiceId || ''} ${item.order?.items.map(item => item.description).join(' ') || ''}`.toLowerCase().includes(query.trim().toLowerCase()),
           );
           return (
             <>
@@ -122,6 +104,8 @@ function LiveTransactions({ api, onOpen }) {
                         <tr
                           key={item.id}
                           tabIndex={0}
+                          onMouseEnter={() => prefetchDetails(api, 'evidence', item.id)}
+                          onFocus={() => prefetchDetails(api, 'evidence', item.id)}
                           onClick={() => onOpen(item.id, item.paypalCaptureId)}
                           onKeyDown={(event) => {
                             if (event.key === 'Enter' || event.key === ' ') {
@@ -178,12 +162,7 @@ function LiveTransactions({ api, onOpen }) {
                   )}
                 </div>
               </section>
-              <Pagination
-                page={page}
-                pageSize={data.pageSize}
-                total={data.total}
-                onPage={setPage}
-              />
+
             </>
           );
         }}
@@ -219,6 +198,8 @@ function TransactionDetail({ api, id, onEvidence, onTitle }) {
               <div className="card-bottom button-row coverage-actions">
                 <button
                   className="button primary"
+                  onMouseEnter={() => prefetchDetails(api, 'evidence', id)}
+                  onFocus={() => prefetchDetails(api, 'evidence', id)}
                   onClick={() => onEvidence(id)}
                 >
                   View evidence
@@ -292,6 +273,13 @@ export default function ConnectedApp({ api, auth, session, initialTeams, initial
   const teams = useRemote((signal) => api.merchants(signal), [api], { initialData: initialTeams });
   const [teamDialog, setTeamDialog] = useState(null);
   const [teamUpdates, setTeamUpdates] = useState([]);
+  const [renamingTeam, setRenamingTeam] = useState(null);
+  const arrangementKey = `account:${session.user.id}:team-arrangement`;
+  const [arrangement, setArrangement] = useState(() => {
+    try { const saved = JSON.parse(localStorage.getItem(arrangementKey)); return { order: Array.isArray(saved?.order) ? saved.order : [], pinned: Array.isArray(saved?.pinned) ? saved.pinned : [] }; } catch { return { order: [], pinned: [] }; }
+  });
+  const arrangeTeams = next => { setArrangement(next); try { localStorage.setItem(arrangementKey, JSON.stringify(next)); } catch { /* Keep this session's order. */ } };
+
   const teamSelectionKey = `account:${session.user.id}:active-merchant`;
   const [selectedTeamId, setSelectedTeamId] = useState(() => { if (initialSelectedTeamId) return initialSelectedTeamId; try { return localStorage.getItem(teamSelectionKey); } catch { return null; } });
   const expansionKey = `account:${session.user.id}:expanded-teams`;
@@ -301,6 +289,17 @@ export default function ConnectedApp({ api, auth, session, initialTeams, initial
   });
   useEffect(() => { try { localStorage.setItem(expansionKey, JSON.stringify(expandedTeamIds)); } catch { /* Expansion remains available without storage. */ } }, [expansionKey, expandedTeamIds]);
   const memberships = useMemo(() => mergeTeamMemberships(teams.data?.items || [], teamUpdates), [teams.data, teamUpdates]);
+  const orderedTeams = [...memberships].sort((a, b) => {
+    const rank = id => arrangement.order.includes(id) ? arrangement.order.indexOf(id) : arrangement.order.length + memberships.findIndex(team => team.id === id);
+    return Number(arrangement.pinned.includes(b.id)) - Number(arrangement.pinned.includes(a.id)) || rank(a.id) - rank(b.id);
+  });
+  const moveTeam = (id, direction) => {
+    const order = orderedTeams.map(team => team.id), index = order.indexOf(id), target = index + direction;
+    if (target < 0 || target >= order.length || arrangement.pinned.includes(id) !== arrangement.pinned.includes(order[target])) return;
+    [order[index], order[target]] = [order[target], order[index]];
+    arrangeTeams({ ...arrangement, order });
+  };
+  const pinTeam = id => arrangeTeams({ order: orderedTeams.map(team => team.id), pinned: arrangement.pinned.includes(id) ? arrangement.pinned.filter(item => item !== id) : [...arrangement.pinned, id] });
   const selected = memberships.find(team => team.id === selectedTeamId) || teams.data?.items[0];
   const scopedApis = useRef({ root: api, teams: new Map(initialTeamApis || (initialSelectedTeamId && initialTeamApi ? [[initialSelectedTeamId, initialTeamApi]] : [])) });
   const teamApi = useMemo(() => {
@@ -331,9 +330,10 @@ export default function ConnectedApp({ api, auth, session, initialTeams, initial
       {() => !selected ? (
         <EmptyAccountDashboard api={api} auth={auth} session={session} teams={memberships} onSelectTeam={selectTeam} onCreateTeam={() => setTeamDialog('create')} onJoinTeam={() => setTeamDialog('join')} />
       ) : (
-        <PreparedMerchantWorkspace key={selected.id} api={teamApi} auth={auth} session={session} teams={memberships} expandedTeamIds={expandedTeamIds} onToggleTeam={toggleTeam} onSelectTeam={selectTeam} onTeamUpdated={updateTeam} onCreateTeam={() => setTeamDialog('create')} />
+        <PreparedMerchantWorkspace key={selected.id} api={teamApi} auth={auth} session={session} teams={orderedTeams} arrangement={arrangement} onMoveTeam={moveTeam} onPinTeam={pinTeam} onRenameTeam={setRenamingTeam} expandedTeamIds={expandedTeamIds} onToggleTeam={toggleTeam} onSelectTeam={selectTeam} onTeamUpdated={updateTeam} onCreateTeam={() => setTeamDialog('create')} />
       )}
     </RemoteState>
+    {renamingTeam && <RenameTeamDialog team={renamingTeam} onClose={() => setRenamingTeam(null)} onSave={async displayName => { const scopedApi = scopedApis.current.teams.get(renamingTeam.id) || api.forMerchant(renamingTeam.id); const updated = await scopedApi.updateMerchant({ displayName }); updateTeam(updated); }} />}
     {teamDialog === 'create' && <CreateMerchantDialog account={{ displayName: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || '', email: session.user.email || '' }} onClose={() => setTeamDialog(null)} onOpenTeam={team => { selectTeam(team.id); setTeamDialog(null); }} onCreate={async details => { const team = await api.createMerchant({ displayName: details.displayName }); updateTeam(team); return team; }} />}
     {teamDialog === 'join' && <TeamAccessDialog mode="join" api={api} onClose={() => setTeamDialog(null)} onComplete={() => { setTeamDialog(null); teams.reload(); }} />}
     </>
@@ -347,10 +347,10 @@ function PreparedMerchantWorkspace(props) {
   return <MerchantWorkspace {...props} />;
 }
 
-function MerchantWorkspace({ api, auth, session, teams, expandedTeamIds, onToggleTeam, onSelectTeam, onTeamUpdated, onCreateTeam }) {
+function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam, onPinTeam, onRenameTeam, expandedTeamIds, onToggleTeam, onSelectTeam, onTeamUpdated, onCreateTeam }) {
   const core = useRemote((signal) => api.merchant(signal), [api], { store: api.resources, key: 'merchant' });
   const activity = useRemote(
-    (signal) => api.activity({ limit: 30 }, signal),
+    (signal) => loadActivity(api, signal),
     [api],
     { store: api.resources, key: activityKey() },
   );
@@ -417,6 +417,7 @@ function MerchantWorkspace({ api, auth, session, teams, expandedTeamIds, onToggl
     observer.observe(topbar.current);
     return () => observer.disconnect();
   }, [!!merchant]);
+  useEffect(() => { warmWorkspace(api); }, [api]);
   useEffect(() => {
     const timer = setInterval(activity.reload, 30000);
     return () => clearInterval(timer);
@@ -598,10 +599,12 @@ function MerchantWorkspace({ api, auth, session, teams, expandedTeamIds, onToggl
         ref={sidebar}
       >
         <nav className="team-sidebar" aria-label="Teams">
-          {teams.map(team => {
+          {teams.map((team, teamIndex) => {
             const active = team.id === merchant.id;
             const expanded = expandedTeamIds.includes(team.id);
-            const displayName = active ? merchant.displayName : team.displayName;
+            const displayName = team.displayName;
+            const pinned = arrangement.pinned.includes(team.id);
+            const sameGroup = index => teams[index] && arrangement.pinned.includes(teams[index].id) === pinned;
             return <div className="sidebar-team" key={team.id}>
             <div className="team-heading-row">
               <button
@@ -625,16 +628,9 @@ function MerchantWorkspace({ api, auth, session, teams, expandedTeamIds, onToggl
                   name={expanded ? 'ChevronDown' : 'ChevronRight'}
                   className="team-toggle-chevron"
                 />
+                {pinned && <Icon name="Pin" className="team-pinned-icon" aria-label="Pinned" />}
               </button>
-              <button
-                type="button"
-                className="team-options-trigger"
-                aria-label={`Settings for ${displayName}`}
-                title="Merchant settings"
-                onClick={() => active ? openSettings('merchant') : onSelectTeam(team.id, { settings: true })}
-              >
-                <Icon name="MoreHorizontal" />
-              </button>
+              <TeamOptions name={displayName} pinned={pinned} canMoveUp={Boolean(sameGroup(teamIndex - 1))} canMoveDown={Boolean(sameGroup(teamIndex + 1))} onMove={direction => onMoveTeam(team.id, direction)} onPin={() => onPinTeam(team.id)} canManage={team.role === 'ADMIN'} onRename={() => onRenameTeam(team)} onSettings={() => active ? openSettings('merchant') : onSelectTeam(team.id, { settings: true })} />
             </div>
             <div
               className="team-folder-pages"

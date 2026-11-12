@@ -23,7 +23,7 @@ export default function TeamOptions({ name, pinned, canMoveUp, canMoveDown, onMo
       }
     }}>
       <button type="button" onClick={() => act(onSettings)}><Icon name="Settings" />Settings</button>
-      {canManage && <><button type="button" onClick={() => act(onRename)}><Icon name="Pencil" />Rename team</button><button type="button" onClick={() => act(onInvite)}><Icon name="UserPlus" />Invite members</button></>}
+      {canManage && <><button type="button" onClick={() => act(onRename)}><Icon name="Pencil" />Rename team</button>{onInvite && <button type="button" onClick={() => act(onInvite)}><Icon name="UserPlus" />Invite members</button>}</>}
       <hr className="team-options-divider" />
       <button type="button" onClick={() => act(onPin)}><Icon name={pinned ? 'PinOff' : 'Pin'} size={14} />{pinned ? 'Unpin' : 'Pin'}</button>
       <button type="button" disabled={!canMoveUp} onClick={() => act(() => onMove(-1))}><Icon name="ArrowUp" size={14} />Move up</button>
