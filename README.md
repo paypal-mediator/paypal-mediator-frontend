@@ -104,3 +104,10 @@ transaction table's minimum width.
 Overview is widget-only: no introductory heading/copy. The main cards flow in
 independent columns, with a single column on mobile, to avoid gaps caused by
 matching row heights.
+
+Merchant settings → Integrations renders the backend catalog and existing
+connections as provider buttons with Connect/Connected overlays. Details,
+PayPal checks, and existing ERP disconnect actions live in a nested dialog.
+ERP credential setup remains incomplete in the backend, so the UI exposes its
+availability without collecting keys or manufacturing a successful connection.
+Evidence drop areas use content height, including in dispute upload cards.
