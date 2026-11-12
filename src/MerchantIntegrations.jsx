@@ -6,6 +6,7 @@ import Badge from './Badge';
 import Icon from './Icon';
 import { date, label } from './lib/format';
 
+import { PayPalConnection } from './PayPalConnection';
 const connectedStates = ['connected', 'syncing', 'restricted_permissions', 'rate_limited'];
 function IntegrationDetails({ provider, connection, paypal, admin, api, onChanged, onClose }) {
   const dialog = useRef(null);
@@ -17,7 +18,7 @@ function IntegrationDetails({ provider, connection, paypal, admin, api, onChange
     try { await task(); await onChanged(); } catch (failure) { setError(failure.message); } finally { setBusy(false); }
   };
   return <dialog ref={dialog} className="integration-details-dialog" aria-labelledby="integration-details-title" onCancel={event => { event.preventDefault(); event.stopPropagation(); onClose(); }}><button className="settings-close" aria-label="Close integration" onClick={onClose}><Icon name="X" /></button><div className="settings-section-heading"><h2 id="integration-details-title">{provider.name}</h2></div>{error && <p role="alert">{error}</p>}
-    {isPayPal ? <><dl><div><dt>Connection</dt><dd><Badge>{label(paypal.connectionStatus)}</Badge></dd></div><div><dt>Dispute read access</dt><dd>{label(paypal.disputesReadStatus)}</dd></div><div><dt>Credentials configured</dt><dd>{paypal.credentialsConfigured ? 'Yes' : 'No'}</dd></div><div><dt>Webhook configured</dt><dd>{paypal.webhookConfigured ? 'Yes' : 'No'}</dd></div><div><dt>Last checked</dt><dd>{date(paypal.lastCheckedAt)}</dd></div></dl>{admin && <button className="button primary" disabled={busy} onClick={() => perform(() => api.checkPayPal())}>{busy ? 'Checking…' : 'Check connection'}</button>}</>
+    {isPayPal ? <>{admin && <PayPalConnection getApi={async () => api} connected={paypal.connectionStatus === 'CONNECTED'} onConnected={onChanged} />}{admin && paypal.sellerId && <button type="button" className="button secondary" disabled={busy} onClick={() => perform(() => api.disconnectPayPal())}>Disconnect this business</button>}<dl><div><dt>Connection</dt><dd><Badge>{label(paypal.connectionStatus)}</Badge></dd></div><div><dt>Dispute read access</dt><dd>{label(paypal.disputesReadStatus)}</dd></div><div><dt>Credentials configured</dt><dd>{paypal.credentialsConfigured ? 'Yes' : 'No'}</dd></div><div><dt>Webhook configured</dt><dd>{paypal.webhookConfigured ? 'Yes' : 'No'}</dd></div><div><dt>Last checked</dt><dd>{date(paypal.lastCheckedAt)}</dd></div></dl>{admin && <button className="button primary" disabled={busy} onClick={() => perform(() => api.checkPayPal())}>{busy ? 'Checking…' : 'Check connection'}</button>}</>
       : <>{connection && <><dl><div><dt>Status</dt><dd><Badge>{label(connection.status)}</Badge></dd></div><div><dt>Last sync</dt><dd>{date(connection.lastSyncAt)}</dd></div></dl>{connection.lastSyncError && <p role="alert">{connection.lastSyncError}</p>}</>}{!connection || !connectedStates.includes(connection.status) ? <p className="muted">Connection setup for this provider is not available yet.</p> : admin && <button className="button secondary" disabled={busy} onClick={() => perform(() => api.disconnectErp(connection.id))}>{busy ? 'Disconnecting…' : 'Disconnect'}</button>}</>}
   </dialog>;
 }

@@ -10,6 +10,15 @@ async function intercept(run, response = () => Response.json({ items: [] })) {
   try { await run(createApi({ baseUrl: 'https://api.test/api/', getAccessToken: async () => 'session-token' }), calls); }
   finally { globalThis.fetch = original; }
 }
+
+test('PayPal onboarding remains scoped to the selected business and never submits browser consent flags', async () => {
+  await intercept(async (api, calls) => {
+    const business = api.forMerchant('business-id');
+    await business.connectPayPal(); await business.completePayPal(); await business.disconnectPayPal();
+    assert.deepEqual(calls.map(call => call.url), ['connect', 'complete', 'disconnect'].map(action => `https://api.test/api/settings/integrations/paypal/${action}`));
+    for (const call of calls) { assert.equal(call.method, 'POST'); assert.equal(call.headers['X-Merchant-Id'], 'business-id'); assert.equal(call.headers.Authorization, 'Bearer session-token'); assert.equal(call.body, undefined); }
+  });
+});
 test('live API scopes requests to bearer auth and allowlisted server filters', async () => {
   await intercept(async (api, calls) => {
     await api.transactions({ page: 2, pageSize: 20, paypalCaptureId: 'CAPTURE/1', readiness: 'READY', merchantId: 'not-a-header' });

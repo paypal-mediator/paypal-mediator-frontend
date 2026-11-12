@@ -13,6 +13,11 @@ npm run build
 
 Development uses `http://localhost:3000`, matching the backend's documented CORS origin. Build output is in `dist`.
 
+Email confirmation returns to the origin where signup started. In Supabase Auth
+URL Configuration, set Site URL to `https://paypal-mediator-frontend.onrender.com`
+and allow `https://paypal-mediator-frontend.onrender.com/` and
+`http://localhost:3000/` as redirect URLs. Remove retired Vercel redirects.
+
 ## Connect to the backend
 
 Copy `.env.example` to `.env.local`, set the Supabase project URL and publishable browser key, then restart Vite. Sign in with an existing Supabase user who has an active merchant membership. The API URL includes `/api`. Keep service-role keys and PayPal credentials on the server.

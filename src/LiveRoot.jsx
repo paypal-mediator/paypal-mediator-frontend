@@ -30,7 +30,7 @@ function SignedOut({ client, initialError = '' }) {
     const fullName = String(form.get('fullName') || '').trim();
     try {
       if (signingUp) {
-        const { data, error } = await client.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
+        const { data, error } = await client.auth.signUp({ email, password, options: { emailRedirectTo: new URL('/', window.location.origin).href, data: { full_name: fullName } } });
         if (error) throw error;
         if (!data.session) setNotice('Account created. Check your email to confirm it, then sign in.');
       } else {
@@ -45,6 +45,7 @@ function SignedOut({ client, initialError = '' }) {
   }
   return <div className="signed-out"><section className="card"><h1>{signingUp ? 'Create account' : 'Sign in'}</h1><p>{signingUp ? 'Start your merchant workspace.' : 'Open your merchant workspace.'}</p><form key={mode} className="account-settings-form account-information-form" onSubmit={submit}>{signingUp && <label>Full name<input type="text" name="fullName" autoComplete="name" required /></label>}<label>Email address<input type="email" name="email" autoComplete="username" required /></label><label>Password<input type="password" name="password" autoComplete={signingUp ? 'new-password' : 'current-password'} required /></label>{error && <p role="alert">{error}</p>}{notice && <p className="auth-notice" role="status">{notice}</p>}<button className="button primary" disabled={busy}>{busy ? (signingUp ? 'Creating account…' : 'Signing in…') : (signingUp ? 'Create account' : 'Sign in')}</button></form><button className="auth-switch" type="button" onClick={() => switchMode(signingUp ? 'signin' : 'signup')}>{signingUp ? 'Already have an account? Sign in' : 'Don’t have an account? Create one'}</button></section></div>;
 }
+import { PayPalReturn } from './PayPalConnection';
 export default function LiveRoot() {
   const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
   const [session, setSession] = useState(undefined);
@@ -78,6 +79,8 @@ export default function LiveRoot() {
   if (!configured) return <div className="signed-out"><section className="card"><h1>Connection setup</h1><p>Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.local, then restart the frontend.</p></section></div>;
   if (session === undefined) return <WorkspaceLoading />;
   if (!session) return <SignedOut client={auth()} initialError={error} />;
+  const returningMerchant = new URLSearchParams(window.location.search).get('paypalReturn');
+  if (returningMerchant) return <PayPalReturn api={api} merchantId={returningMerchant} />;
   if (startupError?.userId === userId) return <div className="signed-out"><section className="card remote-state" role="alert"><p>{startupError.error.message}</p>{startupError.error.requestId && <small>Request ID: {startupError.error.requestId}</small>}<button className="button secondary" onClick={() => { setStartupError(null); setStartupAttempt(value => value + 1); }}>Try again</button><button className="button secondary" onClick={() => auth().auth.signOut()}>Sign out</button></section></div>;
   if (workspace?.userId !== userId) return <WorkspaceLoading />;
   const ConnectedApp = workspace.Component;

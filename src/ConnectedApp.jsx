@@ -293,7 +293,7 @@ export default function ConnectedApp({ api, auth, session, initialTeams, initial
       )}
     </RemoteState>
     {renamingTeam && <RenameTeamDialog team={renamingTeam} onClose={() => setRenamingTeam(null)} onSave={async displayName => { const scopedApi = scopedApis.current.teams.get(renamingTeam.id) || api.forMerchant(renamingTeam.id); const updated = await scopedApi.updateMerchant({ displayName }); updateTeam(updated); }} />}
-    {teamDialog === 'create' && <CreateMerchantDialog account={{ displayName: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || '', email: session.user.email || '' }} onClose={() => setTeamDialog(null)} onOpenTeam={team => { selectTeam(team.id); setTeamDialog(null); }} onCreate={async details => { const team = await api.createMerchant({ displayName: details.displayName }); updateTeam(team); return team; }} />}
+    {teamDialog === 'create' && <CreateMerchantDialog api={api} account={{ displayName: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || '', email: session.user.email || '' }} onClose={() => setTeamDialog(null)} onOpenTeam={team => { selectTeam(team.id); setTeamDialog(null); }} onCreate={async details => { const team = await api.createMerchant({ displayName: details.displayName }); updateTeam(team); return team; }} />}
     {teamDialog === 'join' && <TeamAccessDialog mode="join" api={api} onClose={() => setTeamDialog(null)} onComplete={() => { setTeamDialog(null); teams.reload(); }} />}
     </>
   );
