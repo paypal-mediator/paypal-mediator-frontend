@@ -27,9 +27,10 @@ function SignedOut({ client, initialError = '' }) {
     const form = new FormData(event.currentTarget);
     const email = String(form.get('email') || '').trim();
     const password = String(form.get('password') || '');
+    const fullName = String(form.get('fullName') || '').trim();
     try {
       if (signingUp) {
-        const { data, error } = await client.auth.signUp({ email, password });
+        const { data, error } = await client.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
         if (error) throw error;
         if (!data.session) setNotice('Account created. Check your email to confirm it, then sign in.');
       } else {
@@ -42,7 +43,7 @@ function SignedOut({ client, initialError = '' }) {
       setBusy(false);
     }
   }
-  return <div className="signed-out"><section className="card"><h1>{signingUp ? 'Create account' : 'Sign in'}</h1><p>{signingUp ? 'Start your merchant workspace.' : 'Open your merchant workspace.'}</p><form key={mode} className="account-settings-form account-information-form" onSubmit={submit}><label>Email address<input type="email" name="email" autoComplete="username" required /></label><label>Password<input type="password" name="password" autoComplete={signingUp ? 'new-password' : 'current-password'} required /></label>{error && <p role="alert">{error}</p>}{notice && <p className="auth-notice" role="status">{notice}</p>}<button className="button primary" disabled={busy}>{busy ? (signingUp ? 'Creating account…' : 'Signing in…') : (signingUp ? 'Create account' : 'Sign in')}</button></form><button className="auth-switch" type="button" onClick={() => switchMode(signingUp ? 'signin' : 'signup')}>{signingUp ? 'Already have an account? Sign in' : 'Don’t have an account? Create one'}</button></section></div>;
+  return <div className="signed-out"><section className="card"><h1>{signingUp ? 'Create account' : 'Sign in'}</h1><p>{signingUp ? 'Start your merchant workspace.' : 'Open your merchant workspace.'}</p><form key={mode} className="account-settings-form account-information-form" onSubmit={submit}>{signingUp && <label>Full name<input type="text" name="fullName" autoComplete="name" required /></label>}<label>Email address<input type="email" name="email" autoComplete="username" required /></label><label>Password<input type="password" name="password" autoComplete={signingUp ? 'new-password' : 'current-password'} required /></label>{error && <p role="alert">{error}</p>}{notice && <p className="auth-notice" role="status">{notice}</p>}<button className="button primary" disabled={busy}>{busy ? (signingUp ? 'Creating account…' : 'Signing in…') : (signingUp ? 'Create account' : 'Sign in')}</button></form><button className="auth-switch" type="button" onClick={() => switchMode(signingUp ? 'signin' : 'signup')}>{signingUp ? 'Already have an account? Sign in' : 'Don’t have an account? Create one'}</button></section></div>;
 }
 export default function LiveRoot() {
   const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
