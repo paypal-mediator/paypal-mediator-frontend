@@ -75,3 +75,10 @@ The merchant team backend in `paypal-mediator-production` adds team creation, in
 - Settings: Up/Down switches categories; Escape closes the dialog.
 
 Tests cover authenticated API requests, query filters, idempotency keys, binary evidence, nullable order fields, stale investigation and verification runs, URL routing, and public runtime configuration.
+
+Dashboard follow-up: the connected evidence screen reuses the original split
+cards, per-category uploads, search, and revision sidebar with backend records.
+Older revisions are read-only. Manual refresh controls are removed; a browser
+reload fetches fresh workspace data. Dispute rows display one colored PayPal
+status pill. Activity entries and inbox notifications open the selected event's
+activity details, with transaction navigation available as an explicit action.

@@ -9,6 +9,7 @@ import { notificationFromActivity } from './lib/live';
 import RemoteState from './RemoteState';
 import LiveEvidence from './LiveEvidence';
 import LiveActivity from './LiveActivity';
+import ActivityDetails from './ActivityDetails';
 import LiveSettings from './LiveSettings';
 import { LiveDisputeList, LiveDisputeDetail, Pagination } from './LiveDisputes';
 import TransactionFilters from './TransactionFilters';
@@ -190,32 +191,17 @@ function LiveTransactions({ api, onOpen }) {
     </>
   );
 }
-function TransactionDetail({ api, id, admin, onEvidence, onTitle }) {
+function TransactionDetail({ api, id, onEvidence, onTitle }) {
   const resource = useRemote(
     (signal) => api.transaction(id, signal),
     [api, id],
     { store: api.resources, key: transactionKey(id) },
   );
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState('');
   useEffect(() => {
     if (resource.data) onTitle(transactionName(resource.data));
   }, [resource.data?.paypalCaptureId]);
-  const refresh = async () => {
-    setBusy(true);
-    setError('');
-    try {
-      await api.refreshOrderSources(id);
-      resource.reload();
-    } catch (failure) {
-      setError(failure.message);
-    } finally {
-      setBusy(false);
-    }
-  };
   return (
     <>
-      {error && <p role="alert">{error}</p>}
       <RemoteState resource={resource}>
         {(transaction) => (
           <div className="two-column detail-grid">
@@ -230,22 +216,13 @@ function TransactionDetail({ api, id, admin, onEvidence, onTitle }) {
                   <Badge>{label(check.status)}</Badge>
                 </div>
               ))}
-              <div className="card-bottom button-row">
+              <div className="card-bottom button-row coverage-actions">
                 <button
                   className="button primary"
                   onClick={() => onEvidence(id)}
                 >
                   View evidence
                 </button>
-                {admin && (
-                  <button
-                    className="button secondary"
-                    disabled={busy}
-                    onClick={refresh}
-                  >
-                    {busy ? 'Refreshing…' : 'Refresh order sources'}
-                  </button>
-                )}
               </div>
             </section>
           </div>
@@ -377,6 +354,7 @@ function MerchantWorkspace({ api, auth, session, teams, expandedTeamIds, onToggl
     [api],
     { store: api.resources, key: activityKey() },
   );
+  const [selectedActivity, setSelectedActivity] = useState(null);
   const [merchantOverride, setMerchantOverride] = useState(null);
   const merchant = merchantOverride || core.data;
   const [route, setRoute] = useState(() => routeFromLocation(window.location)),
@@ -545,18 +523,11 @@ function MerchantWorkspace({ api, auth, session, teams, expandedTeamIds, onToggl
     window.addEventListener('popstate', restoreRoute);
     return () => window.removeEventListener('popstate', restoreRoute);
   }, []);
-  const navigateActivity = (event) => {
-    if (event.transactionId)
-      go({
-        page: event.resourceType === 'TRANSACTION' ? 'details' : 'evidence',
-        id: event.transactionId,
-      });
-    else if (event.resourceType === 'TRANSACTION' && event.resourceId)
-      go({ page: 'details', id: event.resourceId });
-    else if (['MERCHANT', 'SUBSCRIPTION'].includes(event.resourceType))
-      openSettings('merchant');
-    else go('activity');
+  const navigateActivity = event => {
+    setInboxOpen(false);
+    setSelectedActivity(event);
   };
+
   if (!merchant)
     return (
       <div className="signed-out">
@@ -822,6 +793,7 @@ function MerchantWorkspace({ api, auth, session, teams, expandedTeamIds, onToggl
           )}
         </div>
       </main>
+      {selectedActivity && <ActivityDetails key={selectedActivity.id} event={selectedActivity} onClose={() => setSelectedActivity(null)} onTransaction={id => { setSelectedActivity(null); go({ page: 'details', id }); }} />}
       {settings && (
         <LiveSettings
           key={settings}
