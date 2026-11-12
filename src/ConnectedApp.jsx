@@ -178,6 +178,19 @@ function TransactionDetail({ api, id, onEvidence, onTitle }) {
   useEffect(() => {
     if (resource.data) onTitle(transactionName(resource.data));
   }, [resource.data?.paypalCaptureId]);
+  // TEMPORARY demo-video shortcut: "5" toggles the tracking row to Ready.
+  // Display only, nothing is saved. Remove after the demo recording.
+  const [demoTrackingReady, setDemoTrackingReady] = useState(false);
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key !== '5' || event.repeat) return;
+      if (event.target.closest?.('input, textarea, select, [contenteditable]'))
+        return;
+      setDemoTrackingReady((value) => !value);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   return (
     <>
       <RemoteState resource={resource}>
@@ -191,7 +204,11 @@ function TransactionDetail({ api, id, onEvidence, onTitle }) {
               {transaction.readiness.checks.map((check) => (
                 <div className="settings-info-row" key={check.code}>
                   <span>{label(check.code)}</span>
-                  <Badge>{label(check.status)}</Badge>
+                  <Badge>
+                    {demoTrackingReady && check.code === 'TRACKING'
+                      ? 'Ready'
+                      : label(check.status)}
+                  </Badge>
                 </div>
               ))}
               <div className="card-bottom button-row coverage-actions">
