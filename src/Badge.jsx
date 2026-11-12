@@ -4,6 +4,7 @@ const tones = {
   done: 'success', 'needs attention': 'warning', completed: 'success', ready: 'success', present: 'success', valid: 'success', connected: 'success', available: 'success', yes: 'success',
   incomplete: 'warning', missing: 'warning', 'needs review': 'warning', 'not checked': 'warning',
   conflict: 'danger', invalid: 'danger', 'invalid credentials': 'danger', denied: 'danger',
+  overdue: 'danger', upcoming: 'warning',
   open: 'info', 'waiting for seller response': 'warning', 'waiting for buyer response': 'warning', 'under review': 'info', resolved: 'success', other: 'neutral',
   succeeded: 'success', failed: 'danger', blocked: 'warning', started: 'info',
   current: 'info', historical: 'neutral', no: 'neutral', 'not configured': 'neutral', unavailable: 'neutral',

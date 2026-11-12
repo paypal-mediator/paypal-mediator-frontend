@@ -89,3 +89,9 @@ prime their detail cache, likely evidence/cases warm in the background, and row
 hover/focus prefetches details. Writes retain existing data during revalidation;
 uncached reads use the full-screen workspace loader. Team options reuse the
 original popover, with persistent account-scoped pin/order and backend renaming.
+
+Overview now summarizes captured volume (30 days), open dispute exposure,
+response workload, document readiness, upcoming deadlines, payment activity
+(14 days), recent activity, and recent transactions from shared team caches.
+Money is summed with integer precision and kept separate by currency. Connection
+and integration status remain in settings and are absent from overview.

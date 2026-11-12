@@ -8,6 +8,7 @@ import { mergeTeamMemberships } from './lib/team';
 import { notificationFromActivity } from './lib/live';
 import RemoteState from './RemoteState';
 import LiveEvidence from './LiveEvidence';
+import DashboardOverview from './DashboardOverview';
 import LiveActivity from './LiveActivity';
 import ActivityDetails from './ActivityDetails';
 import TeamOptions from './TeamOptions';
@@ -210,63 +211,6 @@ function TransactionDetail({ api, id, onEvidence, onTitle }) {
         )}
       </RemoteState>
     </>
-  );
-}
-function Overview({ api, merchant, onPage }) {
-  const resource = useRemote(
-    (signal) =>
-      Promise.all([
-        api.transactions({ page: 1, pageSize: 20 }, signal),
-        api.disputes({ page: 1, pageSize: 20 }, signal),
-        api.integrations(signal),
-      ]),
-    [api],
-    { store: api.resources, key: 'overview' },
-  );
-  return (
-    <RemoteState resource={resource}>
-      {([transactions, disputes, integrations]) => (
-        <>
-          <div className="stats-grid">
-            {[
-              ['Transactions', transactions.total],
-              ['Disputes', disputes.total],
-            ].map(([title, value]) => (
-              <section className="card" key={title}>
-                <div className="stat-label">{title}</div>
-                <div className="stat-value">{value}</div>
-                <button
-                  className="text-button"
-                  onClick={() => onPage(title.toLowerCase())}
-                >
-                  View {title.toLowerCase()}
-                  <Icon name="ArrowUpRight" />
-                </button>
-              </section>
-            ))}
-          </div>
-          <section className="card">
-            <div className="card-heading">
-              <h2>{merchant.displayName}</h2>
-            </div>
-            <dl>
-              <div>
-                <dt>Your role</dt>
-                <dd>{label(merchant.role)}</dd>
-              </div>
-              <div>
-                <dt>PayPal connection</dt>
-                <dd>{label(integrations.paypal.connectionStatus)}</dd>
-              </div>
-              <div>
-                <dt>Dispute read access</dt>
-                <dd>{label(integrations.paypal.disputesReadStatus)}</dd>
-              </div>
-            </dl>
-          </section>
-        </>
-      )}
-    </RemoteState>
   );
 }
 export default function ConnectedApp({ api, auth, session, initialTeams, initialSelectedTeamId, initialTeamApi, initialTeamApis }) {
@@ -732,7 +676,7 @@ function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam,
             </p>
           )}
           {route.page === 'overview' && (
-            <Overview api={api} merchant={merchant} onPage={go} />
+            <DashboardOverview api={api} onPage={go} onTransaction={item => go({ page: 'details', id: item.id, title: item.paypalCaptureId })} onDispute={item => go({ page: 'dispute-details', id: item.id, title: item.paypalDisputeId })} onActivity={navigateActivity} />
           )}
           {route.page === 'transactions' && (
             <LiveTransactions
