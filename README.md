@@ -19,15 +19,16 @@ Copy `.env.example` to `.env.local`, set the Supabase project URL and publishabl
 
 Connected mode uses Supabase sessions and the authorized backend for merchant settings, PayPal status checks, paginated transactions and disputes, evidence uploads and downloads, investigation and verification runs, activity, and billing records. Uploads accept PDF, PNG, and JPEG files up to 512 KiB. Readiness filters apply to the current transaction page. The backend resolves the merchant context, so connected mode displays the merchant returned by `GET /merchants/me`.
 
-Opening a team preloads its profile, first transaction/dispute pages, latest activity,
-integrations, and billing before showing the workspace. Navigation reuses an in-memory
+Startup preloads every accessible team's profile, first transaction/dispute pages,
+latest activity, integrations, and billing before showing the workspace. Team loads
+run in bounded parallel batches. Navigation and team switching reuse an in-memory
 cache scoped to that team and signed-in session. Background refreshes keep existing
 rows visible; successful writes invalidate cached reads. Extra pages, filters, and
 unvisited detail records load on demand and are reused on return. Failed sections
 keep their own retry state without blocking the other tables.
 
 On refresh, one loading screen covers session restoration, app code, account teams,
-and the selected workspace preload. The workspace mounts with those results rather
+and all team workspace preloads. The workspace mounts with those results rather
 than restarting each read. The URL stays on the requested screen; startup failures
 stop at an error with an explicit retry instead of cycling through loading screens.
 

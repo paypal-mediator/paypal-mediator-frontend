@@ -311,7 +311,7 @@ function Overview({ api, merchant, onPage }) {
     </RemoteState>
   );
 }
-export default function ConnectedApp({ api, auth, session, initialTeams, initialSelectedTeamId, initialTeamApi }) {
+export default function ConnectedApp({ api, auth, session, initialTeams, initialSelectedTeamId, initialTeamApi, initialTeamApis }) {
   const teams = useRemote((signal) => api.merchants(signal), [api], { initialData: initialTeams });
   const [teamDialog, setTeamDialog] = useState(null);
   const [teamUpdates, setTeamUpdates] = useState([]);
@@ -319,7 +319,7 @@ export default function ConnectedApp({ api, auth, session, initialTeams, initial
   const [selectedTeamId, setSelectedTeamId] = useState(() => { if (initialSelectedTeamId) return initialSelectedTeamId; try { return localStorage.getItem(teamSelectionKey); } catch { return null; } });
   const memberships = useMemo(() => mergeTeamMemberships(teams.data?.items || [], teamUpdates), [teams.data, teamUpdates]);
   const selected = memberships.find(team => team.id === selectedTeamId) || teams.data?.items[0];
-  const scopedApis = useRef({ root: api, teams: new Map(initialSelectedTeamId && initialTeamApi ? [[initialSelectedTeamId, initialTeamApi]] : []) });
+  const scopedApis = useRef({ root: api, teams: new Map(initialTeamApis || (initialSelectedTeamId && initialTeamApi ? [[initialSelectedTeamId, initialTeamApi]] : [])) });
   const teamApi = useMemo(() => {
     if (!selected) return api;
     if (scopedApis.current.root !== api) scopedApis.current = { root: api, teams: new Map() };

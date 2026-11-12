@@ -56,5 +56,5 @@ export default function LiveRoot() {
   if (startupError?.userId === userId) return <div className="signed-out"><section className="card remote-state" role="alert"><p>{startupError.error.message}</p>{startupError.error.requestId && <small>Request ID: {startupError.error.requestId}</small>}<button className="button secondary" onClick={() => { setStartupError(null); setStartupAttempt(value => value + 1); }}>Try again</button><button className="button secondary" onClick={() => auth().auth.signOut()}>Sign out</button></section></div>;
   if (workspace?.userId !== userId) return <WorkspaceLoading />;
   const ConnectedApp = workspace.Component;
-  return <ConnectedApp key={userId} api={api} auth={auth()} session={session} initialTeams={workspace.teams} initialSelectedTeamId={workspace.selectedTeamId} initialTeamApi={workspace.teamApi} />;
+  return <ConnectedApp key={userId} api={api} auth={auth()} session={session} initialTeams={workspace.teams} initialSelectedTeamId={workspace.selectedTeamId} initialTeamApi={workspace.teamApi} initialTeamApis={workspace.teamApis} />;
 }
