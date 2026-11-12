@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRemote } from './lib/useRemote';
 import { activityKey, preloadWorkspace, transactionKey, transactionListKey, workspacePrepared } from './lib/workspace-data';
 import WorkspaceLoading from './WorkspaceLoading';
+import EmptyState from './EmptyState';
 import { routeFromLocation, routePath } from './lib/routes';
 import { mergeTeamMemberships } from './lib/team';
 import { notificationFromActivity } from './lib/live';
@@ -168,11 +169,11 @@ function LiveTransactions({ api, onOpen }) {
                     </tbody>
                   </table>
                   {!items.length && (
-                    <div className="empty-state">
+                    <EmptyState>
                       {filter === 'All transactions'
                         ? 'No transactions found.'
                         : 'No matching transactions on this page.'}
-                    </div>
+                    </EmptyState>
                   )}
                 </div>
               </section>
