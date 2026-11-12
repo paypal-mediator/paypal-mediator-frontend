@@ -44,7 +44,7 @@ function OdooConnection({ api, onChanged, onClose }) {
       <label>API Key<input name="apiKey" type="password" autoComplete="off" required disabled={busy} /></label>
       <p className="muted">Create a key in Odoo: My preferences / Security / Create API Key. Your key is encrypted and never displayed again here.</p>
       {error && <p role="alert">{error}</p>}
-      <button className="button primary" disabled={busy}>{busy ? 'Verifying connection�' : 'Verify and connect'}</button>
+      <button className="button primary" disabled={busy}>{busy ? 'Verifying connection...' : 'Verify and connect'}</button>
     </form>
   </dialog>;
 }
@@ -75,7 +75,7 @@ export default function MerchantIntegrations({ api, admin }) {
     </article>)}
     {!data.connections.length && <p className="muted">No ERP connections for this team yet.</p>}
     {admin && <><h3>Add connection</h3><button className="button primary" onClick={() => setSelected('odoo')}>Connect Odoo</button><p className="muted">You can connect more than one Odoo instance to this team.</p></>}
-    <p className="muted">Disconnecting removes this app�s access locally. Revoke the API Key in Odoo if you no longer use it.</p>
+    <p className="muted">Disconnecting removes this application access access locally. Revoke the API Key in Odoo if you no longer use it.</p>
     {selected === 'odoo' && <OdooConnection api={api} onChanged={resource.reload} onClose={() => setSelected(null)} />}
     {selected === 'paypal' && <IntegrationDetails provider={{provider: 'paypal', name: 'PayPal'}} paypal={data.paypal} admin={admin} api={api} onChanged={resource.reload} onClose={() => setSelected(null)} />}
   </>}</RemoteState></>;
