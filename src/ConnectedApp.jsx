@@ -26,6 +26,7 @@ import Icon from './Icon';
 import Badge from './Badge';
 import EmptyAccountDashboard from './EmptyAccountDashboard';
 import TeamAccessDialog from './TeamAccessDialog';
+import { PendingTeamInvitations } from './TeamInvitations';
 import CreateMerchantDialog from './CreateMerchantDialog';
 import {
   date,
@@ -291,12 +292,13 @@ export default function ConnectedApp({ api, auth, session, initialTeams, initial
       {() => !selected ? (
         <EmptyAccountDashboard api={api} auth={auth} session={session} teams={memberships} onSelectTeam={selectTeam} onCreateTeam={() => setTeamDialog('create')} onJoinTeam={() => setTeamDialog('join')} />
       ) : (
-        <PreparedMerchantWorkspace key={selected.id} api={teamApi} auth={auth} session={session} teams={orderedTeams} arrangement={arrangement} onMoveTeam={moveTeam} onPinTeam={pinTeam} onRenameTeam={setRenamingTeam} expandedTeamIds={expandedTeamIds} onToggleTeam={toggleTeam} onSelectTeam={selectTeam} onTeamUpdated={updateTeam} onCreateTeam={() => setTeamDialog('create')} />
+        <PreparedMerchantWorkspace key={selected.id} api={teamApi} auth={auth} session={session} teams={orderedTeams} arrangement={arrangement} onMoveTeam={moveTeam} onPinTeam={pinTeam} onRenameTeam={setRenamingTeam} expandedTeamIds={expandedTeamIds} onToggleTeam={toggleTeam} onSelectTeam={selectTeam} onTeamUpdated={updateTeam} onCreateTeam={() => setTeamDialog('create')} onJoinTeam={() => setTeamDialog('join')} />
       )}
     </RemoteState>
+    <PendingTeamInvitations api={api} onOpen={() => setTeamDialog('join')} />
     {renamingTeam && <RenameTeamDialog team={renamingTeam} onClose={() => setRenamingTeam(null)} onSave={async displayName => { const scopedApi = scopedApis.current.teams.get(renamingTeam.id) || api.forMerchant(renamingTeam.id); const updated = await scopedApi.updateMerchant({ displayName }); updateTeam(updated); }} />}
     {teamDialog === 'create' && <CreateMerchantDialog api={api} account={{ displayName: session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || '', email: session.user.email || '' }} onClose={() => setTeamDialog(null)} onOpenTeam={team => { selectTeam(team.id); setTeamDialog(null); }} onCreate={async details => { const team = await api.createMerchant({ displayName: details.displayName }); updateTeam(team); return team; }} />}
-    {teamDialog === 'join' && <TeamAccessDialog mode="join" api={api} onClose={() => setTeamDialog(null)} onComplete={() => { setTeamDialog(null); teams.reload(); }} />}
+    {teamDialog === 'join' && <TeamAccessDialog mode="join" api={api} onClose={() => setTeamDialog(null)} onComplete={team => { updateTeam(team); setSelectedTeamId(team.id); setExpandedTeamIds(current => [...new Set([...current, team.id])]); try { localStorage.setItem(teamSelectionKey, team.id); } catch { /* Selection is available in this session. */ } window.history.pushState(null, '', '/'); setTeamDialog(null); teams.reload(); }} />}
     </>
   );
 }
@@ -308,7 +310,7 @@ function PreparedMerchantWorkspace(props) {
   return <MerchantWorkspace {...props} />;
 }
 
-function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam, onPinTeam, onRenameTeam, expandedTeamIds, onToggleTeam, onSelectTeam, onTeamUpdated, onCreateTeam }) {
+function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam, onPinTeam, onRenameTeam, expandedTeamIds, onToggleTeam, onSelectTeam, onTeamUpdated, onCreateTeam, onJoinTeam }) {
   const core = useRemote((signal) => api.merchant(signal), [api], { store: api.resources, key: 'merchant' });
   const activity = useRemote(
     (signal) => loadActivity(api, signal),
@@ -616,7 +618,7 @@ function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam,
             </div>
           </div>;
           })}
-          <div className="team-heading-row"><button type="button" className="team-folder new-team-option" onClick={onCreateTeam}><Icon name="Plus" className="sidebar-icon" /><span>New team</span></button></div>
+          <div className="team-heading-row"><button type="button" className="team-folder new-team-option" onClick={onCreateTeam}><Icon name="Plus" className="sidebar-icon" /><span>New team</span></button></div><div className="team-heading-row"><button type="button" className="team-folder new-team-option" onClick={onJoinTeam}><Icon name="Users" className="sidebar-icon" /><span>Join a team</span></button></div>
         </nav>
       </aside>
       <Inbox

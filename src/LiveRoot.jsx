@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createApi } from './lib/api';
 import { bootstrapWorkspace } from './lib/workspace-bootstrap';
 import WorkspaceLoading from './WorkspaceLoading';
+import { InvitationLanding } from './TeamInvitations';
 let connectedModule;
 function loadConnectedComponent() {
   if (!connectedModule) connectedModule = import('./ConnectedApp').catch(error => { connectedModule = undefined; throw error; });
@@ -47,6 +48,13 @@ function SignedOut({ client, initialError = '' }) {
 }
 import { PayPalReturn } from './PayPalConnection';
 export default function LiveRoot() {
+  const [invitationId, setInvitationId] = useState(() => {
+    const value = new URLSearchParams(window.location.search).get('teamInvitation');
+    if (value) { try { sessionStorage.setItem('pending-team-invitation', value); } catch { /* Current link still works. */ } }
+    let pending = value;
+    if (!pending) { try { pending = sessionStorage.getItem('pending-team-invitation'); } catch { /* Storage is optional. */ } }
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pending || '') ? pending : null;
+  });
   const configured = Boolean(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY);
   const [session, setSession] = useState(undefined);
   const [error, setError] = useState('');
@@ -67,7 +75,7 @@ export default function LiveRoot() {
   } }), []);
   const userId = session?.user.id;
   useEffect(() => {
-    if (!userId) { setWorkspace(null); return; }
+    if (!userId || invitationId) { setWorkspace(null); return; }
     const controller = new AbortController();
     let mounted = true;
     setStartupError(null);
@@ -75,10 +83,12 @@ export default function LiveRoot() {
       if (mounted) setWorkspace(value);
     }).catch(error => { if (mounted) setStartupError({ userId, error }); });
     return () => { mounted = false; controller.abort(); };
-  }, [api, userId, startupAttempt]);
+  }, [api, userId, startupAttempt, invitationId]);
   if (!configured) return <div className="signed-out"><section className="card"><h1>Connection setup</h1><p>Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.local, then restart the frontend.</p></section></div>;
   if (session === undefined) return <WorkspaceLoading />;
   if (!session) return <SignedOut client={auth()} initialError={error} />;
+  const exitInvitation = () => { try { sessionStorage.removeItem('pending-team-invitation'); } catch { /* Storage is optional. */ } window.history.replaceState({}, '', '/'); setInvitationId(null); };
+  if (invitationId) return <InvitationLanding api={api} invitationId={invitationId} user={session.user} onExit={exitInvitation} onSignOut={() => auth().auth.signOut()} onJoined={team => { try { localStorage.setItem(`account:${userId}:active-merchant`, team.id); } catch { /* The dashboard can choose the first team. */ } exitInvitation(); }} />;
   const returningMerchant = new URLSearchParams(window.location.search).get('paypalReturn');
   if (returningMerchant) return <PayPalReturn api={api} merchantId={returningMerchant} />;
   if (startupError?.userId === userId) return <div className="signed-out"><section className="card remote-state" role="alert"><p>{startupError.error.message}</p>{startupError.error.requestId && <small>Request ID: {startupError.error.requestId}</small>}<button className="button secondary" onClick={() => { setStartupError(null); setStartupAttempt(value => value + 1); }}>Try again</button><button className="button secondary" onClick={() => auth().auth.signOut()}>Sign out</button></section></div>;

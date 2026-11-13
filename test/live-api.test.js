@@ -11,6 +11,21 @@ async function intercept(run, response = () => Response.json({ items: [] })) {
   finally { globalThis.fetch = original; }
 }
 
+test('team invitations use admin-scoped sender routes and account-scoped recipient routes', async () => {
+  await intercept(async (api, calls) => {
+    const team = api.forMerchant('team-one');
+    await team.createTeamInvitation({ email: 'invited@example.test', role: 'VIEWER' });
+    await team.teamInvitations(); await team.revokeTeamInvitation('invite/one'); await team.resendTeamInvitation('invite/one');
+    await api.merchantInvitations(); await api.merchantInvitation('invite/one'); await api.acceptMerchantInvitation('invite/one'); await api.declineMerchantInvitation('invite/one');
+    assert.deepEqual(JSON.parse(calls[0].body), { email: 'invited@example.test', role: 'VIEWER' });
+    assert.ok(calls.slice(0, 4).every(call => call.headers['X-Merchant-Id'] === 'team-one'));
+    assert.ok(calls.slice(4).every(call => call.headers['X-Merchant-Id'] === undefined));
+    assert.equal(calls[6].url, 'https://api.test/api/merchant-invitations/invite%2Fone/accept');
+    assert.equal(calls[6].body, undefined);
+    assert.equal(calls[7].url, 'https://api.test/api/merchant-invitations/invite%2Fone/decline');
+  });
+});
+
 test('PayPal onboarding remains scoped to the selected business and never submits browser consent flags', async () => {
   await intercept(async (api, calls) => {
     const business = api.forMerchant('business-id');

@@ -15,7 +15,7 @@ export default function TeamAccessDialog({ mode, api, onClose, onComplete }) {
   useEffect(() => { const previous = document.activeElement; dialog.current.showModal(); return () => previous?.focus(); }, []);
   async function perform(action) {
     setError(''); setBusy(true);
-    try { await action(); onComplete(); } catch (failure) { setError(failure.message); } finally { setBusy(false); }
+    try { const result = await action(); onComplete(result); } catch (failure) { setError(failure.message); } finally { setBusy(false); }
   }
   return <dialog className="rename-team-dialog team-access-dialog" ref={dialog} aria-label={mode === 'create' ? 'Create team' : 'Join a team'} onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}><button className="settings-close" aria-label="Close team dialog" disabled={busy} onClick={onClose}><Icon name="X" /></button><h2>{mode === 'create' ? 'Create team' : 'Join a team'}</h2>{mode === 'create' ? <form className="account-settings-form" onSubmit={event => { event.preventDefault(); perform(() => api.createMerchant({ displayName: name.trim() })); }}><label>Team name<input autoFocus required minLength={1} maxLength={120} value={name} onChange={event => setName(event.target.value)} autoComplete="organization" /></label><div className="button-row"><button className="button primary" disabled={busy || !name.trim()}>{busy ? 'Creating…' : 'Create team'}</button><button type="button" className="button secondary" disabled={busy} onClick={onClose}>Cancel</button></div></form> : <Invitations api={api} busy={busy} onAccept={id => perform(() => api.acceptMerchantInvitation(id))} />}{error && <p role="alert">{error}</p>}</dialog>;
 }
