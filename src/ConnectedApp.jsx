@@ -425,6 +425,7 @@ function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam,
               : { page: 'details', id: route.id, title: route.title },
           );
         else if (route.page === 'dispute-details') go('disputes');
+        else if (route.page === 'conciliations' && route.id) go('conciliations');
         else if (route.page === 'details') go('transactions');
         else if (sidebarClosed) toggle.current?.focus();
         else {
@@ -507,6 +508,7 @@ function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam,
     { name: merchant.displayName },
     { name: navigation.find(([id]) => id === current)?.[1], target: current },
   ];
+  if (route.page === 'conciliations' && route.id) crumbs.push({ name: 'Conversation' });
   if (route.page === 'details') crumbs.push({ name: route.title || route.id });
   if (route.page === 'dispute-details')
     crumbs.push({ name: route.title || route.id });
@@ -727,7 +729,7 @@ function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam,
               onOpen={(id, title) => go({ page: 'dispute-details', id, title })}
             />
           )}
-          {route.page === 'conciliations' && <Conciliations key={merchant.id} api={api} admin={admin} initialId={route.id} />}
+          {route.page === 'conciliations' && <Conciliations key={merchant.id} api={api} admin={admin} initialId={route.id} onOpen={id => go({page:'conciliations',id})} onBack={() => go('conciliations')} />}
           {route.page === 'dispute-details' && (
             <LiveDisputeDetail
               key={route.id}
