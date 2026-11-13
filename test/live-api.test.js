@@ -125,3 +125,18 @@ test('Odoo credentials and management requests stay scoped to the selected team'
     for (const call of calls) assert.equal(call.headers['X-Merchant-Id'], 'team-odoo');
   });
 });
+
+
+test('preventive contact APIs are scoped per team and send edited approval with its version', async () => {
+  await intercept(async (api, calls) => {
+    const team = api.forMerchant('team-contact');
+    await team.createContactLink({orderId:'order-id',expiresInDays:7});
+    await team.conciliation('chat-id');
+    await team.conciliationsForOrder('order/id');
+    const approval = {messageId:'source',expectedVersion:1,text:'Merchant edited reply',idempotencyKey:'request-key'};
+    await team.approveConciliation('chat-id',approval);
+    assert.equal(calls[2].url,'https://api.test/api/conciliations?orderId=order%2Fid');
+    assert.deepEqual(JSON.parse(calls[3].body),approval);
+    for(const call of calls) assert.equal(call.headers['X-Merchant-Id'],'team-contact');
+  });
+});

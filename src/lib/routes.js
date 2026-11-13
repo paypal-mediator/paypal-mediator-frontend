@@ -16,6 +16,7 @@ export function routeFromLocation(location) {
   }
   const [root, id, child, transactionId] = segments;
   if (root === 'settings') return { page: 'overview', settings: 'merchant' };
+  if (root === 'conciliations' && id) return { page: 'conciliations', id };
   if (root === 'transactions' && id)
     return { page: child === 'evidence' ? 'evidence' : 'details', id };
   if (root === 'disputes' && id) {
@@ -23,7 +24,7 @@ export function routeFromLocation(location) {
       return { page: 'evidence', id: transactionId, disputeId: id };
     return { page: 'dispute-details', id };
   }
-  if (['transactions', 'disputes', 'activity'].includes(root))
+  if (['transactions', 'disputes', 'conciliations', 'activity'].includes(root))
     return { page: root };
   return { page: 'overview' };
 }
@@ -34,6 +35,7 @@ export function routePath(route) {
     return `/transactions/${encodeURIComponent(route.id)}`;
   if (route.page === 'dispute-details')
     return `/disputes/${encodeURIComponent(route.id)}`;
+  if (route.page === 'conciliations' && route.id) return `/conciliations/${encodeURIComponent(route.id)}`;
   if (route.page === 'evidence') {
     return route.disputeId
       ? `/disputes/${encodeURIComponent(route.disputeId)}/evidence/${encodeURIComponent(route.id)}`

@@ -14,6 +14,7 @@ import ActivityDetails from './ActivityDetails';
 import TeamOptions from './TeamOptions';
 import RenameTeamDialog from './RenameTeamDialog';
 import LiveSettings from './LiveSettings';
+import Conciliations from './Conciliations';
 import { LiveDisputeList, LiveDisputeDetail } from './LiveDisputes';
 import TransactionFilters from './TransactionFilters';
 import PurchaseSummary from './PurchaseSummary';
@@ -36,6 +37,7 @@ import {
 const navigation = [
   ['overview', 'Overview'],
   ['transactions', 'Transactions'],
+  ['conciliations', 'Conciliations'],
   ['disputes', 'Disputes'],
   ['activity', 'Agent Activity'],
 ];
@@ -725,11 +727,13 @@ function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam,
               onOpen={(id, title) => go({ page: 'dispute-details', id, title })}
             />
           )}
+          {route.page === 'conciliations' && <Conciliations key={merchant.id} api={api} admin={admin} initialId={route.id} />}
           {route.page === 'dispute-details' && (
             <LiveDisputeDetail
               key={route.id}
               api={api}
               disputeId={route.id}
+              onConciliation={id => go({page:'conciliations',id})}
               merchant={merchant}
               onTitle={(title) => setRoute((value) => ({ ...value, title }))}
               onTransaction={(id) => go({ page: 'details', id })}
