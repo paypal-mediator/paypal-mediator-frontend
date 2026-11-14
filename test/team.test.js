@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { inviteMember, changeMember, mergeTeamMemberships } from '../src/lib/team.js';
+import { inviteMember, changeMember, mergeTeamMemberships, canEditTeamContent } from '../src/lib/team.js';
 const admin = { id: 'owner', email: 'owner@example.com', role: 'Admin', status: 'Active' };
+
+test('members can edit operational content while viewers and unknown roles cannot', () => {
+  for (const role of ['ADMIN', 'MEMBER']) assert.equal(canEditTeamContent(role), true);
+  for (const role of ['VIEWER', undefined, null, '', 'OWNER']) assert.equal(canEditTeamContent(role), false);
+});
 test('adding or updating a team preserves all other memberships and their order', () => {
   const existing = [{ id: 'alpha', displayName: 'Alpha', role: 'ADMIN' }, { id: 'beta', displayName: 'Beta', role: 'VIEWER' }];
   const added = mergeTeamMemberships(existing, [{ id: 'gamma', displayName: 'Gamma', role: 'ADMIN' }]);

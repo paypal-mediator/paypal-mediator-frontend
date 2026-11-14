@@ -8,7 +8,7 @@ import ShipmentTrackingCard from './ShipmentTrackingCard';
 import EvidenceUpload from './EvidenceUpload';
 import EvidenceScreen from './EvidenceScreen';
 import { label } from './lib/format';
-export default function LiveEvidence({ api, transactionId, admin }) {
+export default function LiveEvidence({ api, transactionId, canEdit = false }) {
   const resource = useRemote(signal => Promise.all([api.resources.load(`transaction:${transactionId}`, signal => api.transaction(transactionId, signal)), api.evidence(transactionId, signal)]), [api, transactionId], { store: api.resources, key: evidenceKey(transactionId) });
   const [error, setError] = useState('');
   const download = async item => {
@@ -20,13 +20,13 @@ export default function LiveEvidence({ api, transactionId, admin }) {
     } catch (failure) { setError(failure.message); }
   };
   const upload = async file => { await api.uploadEvidence(transactionId, await evidenceUploadBody(file)); await resource.reload(); };
-  return <><ShipmentTrackingCard key={transactionId} api={api} transactionId={transactionId} admin={admin} />{error && <p role="alert">{error}</p>}<RemoteState resource={resource}>{([transaction, dossier]) => <EvidenceScreen
+  return <><ShipmentTrackingCard key={transactionId} api={api} transactionId={transactionId} canEdit={canEdit} />{error && <p role="alert">{error}</p>}<RemoteState resource={resource}>{([transaction, dossier]) => <EvidenceScreen
     key={`${transactionId}:${dossier.revision}`} transaction={transaction} snapshots={evidenceSnapshots(transaction, dossier)}
-    renderFiles={({ check, historical }) => <EvidenceUpload category={label(check.code)} readOnly={!admin || historical} accept="application/pdf,image/png,image/jpeg" onUpload={upload} />}
+    renderFiles={({ check, historical }) => <EvidenceUpload category={label(check.code)} readOnly={!canEdit || historical} accept="application/pdf,image/png,image/jpeg" onUpload={upload} />}
     renderRecord={({ records }) => records.map(item => <details className="live-original" key={item.id}><summary>Original record · Version {item.version}</summary><pre>{JSON.stringify(item.content, null, 2)}</pre></details>)}
     renderAdditional={({ snapshot, historical, query }) => {
       const documents = snapshot.items.filter(item => item.type === 'DOCUMENT' && `${item.content.fileName} ${item.sourceSystem}`.toLowerCase().includes(query.toLowerCase()));
-      return <section className="card evidence-split-card live-upload-card"><div className="evidence-current"><h2>Additional evidence</h2><p>PDF, PNG, or JPEG · up to 512 KB.</p>{documents.map(item => <div className="evidence-document" key={item.id}><span>{item.content.fileName}</span><button className="text-button" onClick={() => download(item)}>Download original</button></div>)}</div><div className="evidence-files"><EvidenceUpload category="Supporting evidence" readOnly={!admin || historical} accept="application/pdf,image/png,image/jpeg" onUpload={upload} /></div></section>;
+      return <section className="card evidence-split-card live-upload-card"><div className="evidence-current"><h2>Additional evidence</h2><p>PDF, PNG, or JPEG · up to 512 KB.</p>{documents.map(item => <div className="evidence-document" key={item.id}><span>{item.content.fileName}</span><button className="text-button" onClick={() => download(item)}>Download original</button></div>)}</div><div className="evidence-files"><EvidenceUpload category="Supporting evidence" readOnly={!canEdit || historical} accept="application/pdf,image/png,image/jpeg" onUpload={upload} /></div></section>;
     }}
   />}</RemoteState></>;
 }

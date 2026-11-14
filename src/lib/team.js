@@ -1,4 +1,7 @@
 export const teamRoles = ['Admin', 'Member', 'Viewer'];
+export function canEditTeamContent(role) {
+  return role === 'ADMIN' || role === 'MEMBER';
+}
 export function mergeTeamMemberships(existing, updates) {
   const teams = new Map(existing.map(team => [team.id, team]));
   for (const team of updates) teams.set(team.id, { ...teams.get(team.id), ...team });

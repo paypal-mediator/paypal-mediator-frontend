@@ -4,7 +4,7 @@ import { activityKey, loadActivity, loadTransactions, prefetchDetails, warmWorks
 import WorkspaceLoading from './WorkspaceLoading';
 import EmptyState from './EmptyState';
 import { routeFromLocation, routePath } from './lib/routes';
-import { mergeTeamMemberships } from './lib/team';
+import { mergeTeamMemberships, canEditTeamContent } from './lib/team';
 import { notificationFromActivity } from './lib/live';
 import RemoteState from './RemoteState';
 import LiveEvidence from './LiveEvidence';
@@ -505,7 +505,7 @@ function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam,
       </div>
     );
   const current = rootPage(route),
-    admin = merchant.role === 'ADMIN';
+    canEdit = canEditTeamContent(merchant.role);
   const crumbs = [
     { name: merchant.displayName },
     { name: navigation.find(([id]) => id === current)?.[1], target: current },
@@ -710,7 +710,7 @@ function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam,
               key={route.id}
               api={api}
               id={route.id}
-              admin={admin}
+              canEdit={canEdit}
               onEvidence={(id) =>
                 go({ page: 'evidence', id, title: route.title })
               }
@@ -722,7 +722,7 @@ function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam,
               key={route.id}
               api={api}
               transactionId={route.id}
-              admin={admin}
+              canEdit={canEdit}
             />
           )}
           {route.page === 'disputes' && (
@@ -731,7 +731,7 @@ function MerchantWorkspace({ api, auth, session, teams, arrangement, onMoveTeam,
               onOpen={(id, title) => go({ page: 'dispute-details', id, title })}
             />
           )}
-          {route.page === 'conciliations' && <Conciliations key={merchant.id} api={api} admin={admin} initialId={route.id} onOpen={id => go({page:'conciliations',id})} onBack={() => go('conciliations')} />}
+          {route.page === 'conciliations' && <Conciliations key={merchant.id} api={api} canEdit={canEdit} initialId={route.id} onOpen={id => go({page:'conciliations',id})} onBack={() => go('conciliations')} />}
           {route.page === 'dispute-details' && (
             <LiveDisputeDetail
               key={route.id}

@@ -5,8 +5,8 @@ import RemoteState from './RemoteState';
 import Badge from './Badge';
 
 // The same card is used in the evidence dossier and the linked dispute.
-// Reading never initiates a paid provider request; resolving is an ADMIN action.
-export default function ShipmentTrackingCard({ api, transactionId, admin }) {
+// Reading never initiates a paid provider request; resolving requires ADMIN or MEMBER.
+export default function ShipmentTrackingCard({ api, transactionId, admin, canEdit = admin }) {
   const resource = useRemote(signal => api.shipmentTracking(transactionId, signal), [api, transactionId], {
     store: api.resources, key: `shipment-tracking:${transactionId}`,
   });
@@ -51,7 +51,7 @@ export default function ShipmentTrackingCard({ api, transactionId, admin }) {
       {data.observations.length > 1 && <details><summary>Reports from all sources</summary>{data.observations.map((item, index) => <p key={`${item.sourceSystem}:${item.trackingNumber}:${index}`}>{item.source === '17track' ? '17TRACK' : item.sourceSystem} · {item.trackingNumber} · {label(item.status)} · {item.updatedAt ? date(item.updatedAt) : 'No update date'}</p>)}</details>}
     </>}</RemoteState>}
     {error && <p role="alert">{error}</p>}
-    {admin && <form onSubmit={resolve} className="shipment-tracking-form">
+    {canEdit && <form onSubmit={resolve} className="shipment-tracking-form">
       <label>Tracking number (optional)<input value={number} onChange={event => setNumber(event.target.value)} maxLength={100} pattern="[A-Za-z0-9][A-Za-z0-9_-]{4,99}" placeholder="Use the saved or linked tracking number" /></label>
       <label>17TRACK carrier code (optional)<input type="number" min="1" max="2147483647" step="1" value={carrier} onChange={event => setCarrier(event.target.value)} placeholder="Automatic detection" /></label>
       <details><summary>Additional carrier details</summary><label>Destination postal code<input value={postalCode} onChange={event => setPostalCode(event.target.value)} maxLength={32} /></label><label>Origin country code<input value={origin} onChange={event => setOrigin(event.target.value)} minLength={2} maxLength={2} placeholder="MX" /></label><label>Shipping date<input type="date" value={shipDate} onChange={event => setShipDate(event.target.value)} /></label></details>

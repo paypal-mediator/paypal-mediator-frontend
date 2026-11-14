@@ -2,10 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import Icon from './Icon';
 import RemoteState from './RemoteState';
 import { useRemote } from './lib/useRemote';
+import { label } from './lib/format';
 
 function Invitations({ api, onAccept, busy }) {
   const invitations = useRemote(signal => api.merchantInvitations(signal), [api]);
-  return <RemoteState resource={invitations}>{data => data.items.length ? <div className="team-invitation-list">{data.items.map(invitation => <div className="settings-info-row" key={invitation.id}><span><strong>{invitation.displayName}</strong><small>{invitation.role === 'ADMIN' ? 'Admin' : 'Viewer'} invitation</small></span><button className="button primary" disabled={busy} onClick={() => onAccept(invitation.id)}>Join team</button></div>)}</div> : <div className="settings-action-panel"><h3>No invitations yet</h3><p>Ask a team admin to invite your account’s email address, then check again.</p><button className="button secondary" onClick={invitations.reload}>Check invitations</button></div>}</RemoteState>;
+  return <RemoteState resource={invitations}>{data => data.items.length ? <div className="team-invitation-list">{data.items.map(invitation => <div className="settings-info-row" key={invitation.id}><span><strong>{invitation.displayName}</strong><small>{label(invitation.role)} invitation</small></span><button className="button primary" disabled={busy} onClick={() => onAccept(invitation.id)}>Join team</button></div>)}</div> : <div className="settings-action-panel"><h3>No invitations yet</h3><p>Ask a team admin to invite your account’s email address, then check again.</p><button className="button secondary" onClick={invitations.reload}>Check invitations</button></div>}</RemoteState>;
 }
 export default function TeamAccessDialog({ mode, api, onClose, onComplete }) {
   const dialog = useRef(null);
